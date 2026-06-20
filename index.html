@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#141414">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AMG">
 <title>Amyotte Mechanical Group — Command Center</title>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="assets/amg_icon.png">
@@ -66,6 +70,8 @@ a{color:var(--accent)}
 .topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:10px;padding:10px 14px;
   background:rgba(20,20,20,.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
 .topbar .brandmark{height:30px}
+.topbar .brandword{font-weight:800;font-size:14px;letter-spacing:.2px;white-space:nowrap}
+.topbar .brandword small{font-weight:600;color:var(--muted);font-size:11px}
 .topbar .spacer{flex:1}
 .brand-toggle{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:3px;gap:2px}
 .brand-toggle button{padding:6px 12px;border-radius:999px;font-size:12px;font-weight:700;color:var(--muted)}
@@ -159,6 +165,16 @@ a{color:var(--accent)}
 .toast.show{opacity:1}
 .linkrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
 .linkrow a{font-size:12px;background:var(--panel2);border:1px solid var(--line);padding:6px 10px;border-radius:8px;text-decoration:none;color:var(--txt)}
+/* Print: clean Trust Shield (and any page) for screenshots/website */
+@media print{
+  body{background:#fff;color:#111}
+  .topbar,.nav,.fab,.tabs,.toolbar,.page-sub{display:none!important}
+  #app{padding:0}
+  .card{border:1px solid #ccc;break-inside:avoid}
+  .chip.aph{background:#e8f3fb;color:#15618f}
+  .note{color:#444}
+  .print-hide{display:none!important}
+}
 </style>
 </head>
 <body data-brand="ALL">
@@ -175,6 +191,7 @@ a{color:var(--accent)}
 <div id="app">
   <div class="topbar">
     <img class="brandmark" src="assets/amg_icon.png" alt="AMG" onerror="this.style.display='none'">
+    <span class="brandword" id="brandWord"></span>
     <div class="brand-toggle" id="brandToggle">
       <button data-b="ALL" onclick="setBrand('ALL')">All</button>
       <button data-b="APH" onclick="setBrand('APH')">Plumbing</button>
@@ -204,7 +221,7 @@ a{color:var(--accent)}
    Amyotte Mechanical Group — Command Center
    Single-file PWA. localStorage primary. Templates-first AI.
    ========================================================= */
-const APP_VERSION = "v4.0";
+const APP_VERSION = "v6.0";
 const STORE_KEY = "amg_cc_state_v1";
 
 /* ---- option lists ---- */
@@ -222,6 +239,7 @@ const REP_PLATFORMS = ["Google","BBB","YellowPages","Facebook"];
 const REP_FLAGS = ["Needs response","Responded","Resolved","Watch"];
 const PRIORITIES = ["Emergency","High","Normal"];
 const JOB_STATUS = ["Scheduled","Dispatched","In progress","Complete"];
+const PAID_STATUS = ["N/A","Unpaid","Paid"];
 const PART_LOC = ["Warehouse","Van"];
 const PART_BRAND = ["APH","SUS","Shared"];
 const STAFF_ROLES = ["Journeyman Plumber","Registered Apprentice","HVAC Specialist","Gasfitter Class A","Gasfitter Class B","Vac Truck Operator","Office / Dispatch","Owner"];
@@ -248,6 +266,7 @@ const FRESH_STATE = {
   metaTs:{ presenceScore:0, finance:0 },
   welcomed:false,              // first-run welcome shown (local UI pref)
   hideChecklist:false,         // getting-started checklist dismissed (local UI pref)
+  jobPhotos:{},                // { jobId: [dataURL,...] } — LOCAL ONLY, never synced (keeps payload small)
   fields:{}
 };
 const SYNCED=["leads","customers","reviewRequests","reputation","developments","jobs","inventory","staff","contracts"];
@@ -458,6 +477,12 @@ function setBrand(b){
   STATE.brand=b; saveState();
   document.body.setAttribute("data-brand", b);
   document.querySelectorAll("#brandToggle button").forEach(btn=>btn.classList.toggle("on", btn.dataset.b===b));
+  const bw=document.getElementById("brandWord");
+  if(bw){
+    if(b==="APH") bw.innerHTML='<span style="color:var(--blue)">Amyotte’s</span> <small>Plumbing &amp; Heating</small>';
+    else if(b==="SUS") bw.innerHTML='<span style="color:var(--orange)">SUCK-U-SUMP</span> <small>Service</small>';
+    else bw.innerHTML='<span style="color:var(--txt)">Mechanical Group</span>';
+  }
   if(document.getElementById("app").style.display!=="none") render();
 }
 function brandMatch(itemBrand){
@@ -711,8 +736,14 @@ function editLead(id){
     </div>
     ${l?`<button class="btn ghost" style="margin-top:10px" onclick="if(confirm('Delete this lead?')){delLead('${id}')}">Delete</button>`:""}
     ${l&&l.stage!=="Won"?`<button class="btn sec" style="margin-top:10px" onclick="promoteLeadToCustomer('${id}')">✓ Mark Won → create customer</button>`:""}
+    ${l?`<button class="btn sec" style="margin-top:10px" onclick="createJobFromLead('${id}')">🗓️ Create job from this lead</button>`:""}
     <div id="aiOut"></div>
   `);
+}
+function createJobFromLead(id){
+  const l=STATE.leads.find(x=>x.id===id); if(!l) return;
+  closeModal();
+  editJob(null,{customer:l.name,brand:l.brand==="SUS"?"SUS":"APH",type:l.serviceType,city:l.city,value:l.value,notes:l.notes||""});
 }
 function saveLead(id){
   const x={
@@ -778,12 +809,24 @@ function editCustomer(id){
     <div class="grid g2">${F("Last job date","c_last",d.lastJobDate,"date")}
       <div class="field"><label>Contract customer?</label><select id="c_contract"><option value="no" ${d.contractCustomer?"":"selected"}>No</option><option value="yes" ${d.contractCustomer?"selected":""}>Yes</option></select></div></div>
     ${T("Notes","c_notes",d.notes)}
+    ${ c ? customerHistoryHtml(d.customer) : "" }
     <div class="modal-actions">
       <button class="btn sec" onclick="aiReviewRequest('${id||""}')">✨ Draft review request</button>
       <button class="btn" onclick="saveCustomer('${id||""}')">Save</button></div>
+    ${c?`<button class="btn sec" style="margin-top:10px" onclick="newJobForCustomer('${esc(d.customer)}','${d.brand}')">🗓️ New job for this customer</button>`:""}
     ${c?`<button class="btn ghost" style="margin-top:10px" onclick="if(confirm('Delete?')){delRec('customers','${id}')}">Delete</button>`:""}
     <div id="aiOut"></div>`);
 }
+function customerHistoryHtml(name){
+  const jobs=STATE.jobs.filter(j=>j.customer===name).sort((a,b)=>((b.date||"")>(a.date||"")?1:-1));
+  const ltv=jobs.reduce((s,j)=>s+(Number(j.invoice||j.value)||0),0);
+  let h=`<div class="field"><label>Service history — ${jobs.length} job${jobs.length!==1?"s":""} · ${fmtMoney(ltv)} lifetime</label>`;
+  if(!jobs.length){ h+=`<div class="note">No jobs linked yet. Use "New job for this customer" below.</div></div>`; return h; }
+  h+=jobs.slice(0,12).map(j=>`<div class="note" style="padding:4px 0;border-bottom:1px solid var(--line)">${j.date?fmtDate(j.date):"—"} · ${esc(j.type||"job")} ${paidBadge(j.paid)} ${(j.invoice||j.value)?"· "+fmtMoney(j.invoice||j.value):""}</div>`).join("");
+  h+=`</div>`;
+  return h;
+}
+function newJobForCustomer(name,brand){ closeModal(); editJob(null,{customer:name,brand:brand==="SUS"?"SUS":"APH"}); }
 function saveCustomer(id){
   const x={customer:val("c_name").trim(),brand:val("c_brand"),type:val("c_type"),phone:val("c_phone").trim(),
     email:val("c_email").trim(),relationship:val("c_rel"),lifetimeValue:Number(val("c_ltv"))||0,
@@ -992,16 +1035,20 @@ function viewSchedule(){
   return html;
 }
 function jobStatusColor(s){ return s==="Complete"?"var(--green)":s==="In progress"?"var(--blue)":s==="Dispatched"?"var(--warn)":"var(--muted2)"; }
+function paidBadge(p){ return p==="Unpaid"?'<span class="chip emerg">unpaid</span>':p==="Paid"?'<span class="chip" style="background:rgba(63,185,80,.15);color:#7ee08a;border-color:rgba(63,185,80,.35)">paid</span>':""; }
 function jobRow(j){
+  const amt=Number(j.invoice)||Number(j.value)||0;
+  const np=(STATE.jobPhotos[j.id]||[]).length;
   return `<div class="list-item" onclick="editJob('${j.id}')">
     <span class="flag-dot" style="background:${jobStatusColor(j.status)}"></span>
-    <div class="main"><div class="t">${esc(j.customer||"Job")} ${brandChip(j.brand)}</div>
-    <div class="s">${j.time?esc(j.time)+" · ":""}${esc(j.type||"")}${j.tech?" · "+esc(j.tech):""}${j.city?" · "+esc(j.city):""}</div></div>
-    <div class="rt">${esc(j.status||"")}${j.value?"<br>"+fmtMoney(j.value):""}</div></div>`;
+    <div class="main"><div class="t">${esc(j.customer||"Job")} ${brandChip(j.brand)} ${paidBadge(j.paid)}</div>
+    <div class="s">${j.time?esc(j.time)+" · ":""}${esc(j.type||"")}${j.tech?" · "+esc(j.tech):""}${np?" · 📷"+np:""}</div></div>
+    <div class="rt">${esc(j.status||"")}${amt?"<br>"+fmtMoney(amt):""}</div></div>`;
 }
-function editJob(id){
+function editJob(id, prefill){
   const j=id?STATE.jobs.find(x=>x.id===id):null;
-  const d=j||{brand:STATE.brand==="ALL"?"APH":STATE.brand,status:"Scheduled",date:today()};
+  const d=j||Object.assign({brand:STATE.brand==="ALL"?"APH":STATE.brand,status:"Scheduled",date:today(),paid:"N/A"}, prefill||{});
+  const photos=(id&&STATE.jobPhotos[id])||[];
   openModal(`<h2>${j?"Edit job":"New job"}</h2>
     ${F("Customer","j_cust",d.customer,"text")}
     <div class="grid g2">${S("Brand","j_brand",["APH","SUS"],d.brand)}${S("Service","j_type",SERVICE_TYPES,d.type)}</div>
@@ -1009,18 +1056,45 @@ function editJob(id){
     <div class="grid g2">${F("Technician","j_tech",d.tech,"text")}${S("Status","j_status",JOB_STATUS,d.status)}</div>
     ${F("Address","j_addr",d.address,"text")}
     <div class="grid g2">${S("City","j_city",CITIES,d.city)}${F("Job value $","j_value",d.value,"number")}</div>
+    <div class="grid g2">${F("Quote $","j_quote",d.quote,"number")}${F("Invoice $","j_invoice",d.invoice,"number")}</div>
+    ${S("Payment","j_paid",PAID_STATUS,d.paid)}
     ${T("Notes","j_notes",d.notes)}
+    ${ j ? `<div class="field"><label>Photos <span class="note">(this device only)</span></label>
+      <div class="row" style="flex-wrap:wrap;gap:8px;margin-bottom:8px">${photos.map((p,i)=>`<span style="position:relative;display:inline-block"><img src="${p}" style="width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid var(--line)"><button class="btn sm danger" style="position:absolute;top:-8px;right:-8px;width:20px;height:20px;padding:0;border-radius:50%;font-size:12px" onclick="delJobPhoto('${id}',${i})">×</button></span>`).join("")||'<span class="note">No photos yet.</span>'}</div>
+      <input type="file" accept="image/*" capture="environment" id="j_photo" onchange="addJobPhoto('${id}',event)"></div>` : `<div class="note">Save the job, then reopen it to attach photos.</div>` }
     <div class="modal-actions"><button class="btn" onclick="saveJob('${id||""}')">Save</button></div>
     ${j&&j.status!=="Complete"?`<button class="btn sec" style="margin-top:10px" onclick="advanceJob('${id}')">▶ Advance status</button>`:""}
-    ${j?`<button class="btn ghost" style="margin-top:10px" onclick="if(confirm('Delete job?')){delRec('jobs','${id}')}">Delete</button>`:""}`);
+    ${j?`<button class="btn ghost" style="margin-top:10px" onclick="if(confirm('Delete job?')){delJobFull('${id}')}">Delete</button>`:""}`);
 }
 function saveJob(id){
   const x={customer:val("j_cust").trim(),brand:val("j_brand"),type:val("j_type"),date:val("j_date"),time:val("j_time"),
     tech:val("j_tech").trim(),status:val("j_status"),address:val("j_addr").trim(),city:val("j_city"),
-    value:Number(val("j_value"))||0,notes:val("j_notes").trim()};
+    value:Number(val("j_value"))||0,quote:Number(val("j_quote"))||0,invoice:Number(val("j_invoice"))||0,
+    paid:val("j_paid"),notes:val("j_notes").trim()};
   if(!x.customer){toast("Customer required");return;}
   upsert("jobs",x,id);
+  bumpCustomerLTV(x.customer);
   saveState();closeModal();render();toast("Job saved");
+}
+function delJobFull(id){ if(STATE.jobPhotos[id]){ delete STATE.jobPhotos[id]; } delRec("jobs",id); }
+function addJobPhoto(id,ev){
+  const f=ev.target.files&&ev.target.files[0]; if(!f) return;
+  const rd=new FileReader();
+  rd.onload=()=>{ const img=new Image(); img.onload=()=>{
+    const max=700; let w=img.width,h=img.height; if(w>h&&w>max){h=Math.round(h*max/w);w=max;} else if(h>max){w=Math.round(w*max/h);h=max;}
+    const c=document.createElement("canvas"); c.width=w; c.height=h; c.getContext("2d").drawImage(img,0,0,w,h);
+    STATE.jobPhotos[id]=STATE.jobPhotos[id]||[]; STATE.jobPhotos[id].push(c.toDataURL("image/jpeg",0.6));
+    saveStateLocal(); editJob(id); toast("Photo saved (this device)");
+  }; img.src=rd.result; };
+  rd.readAsDataURL(f);
+}
+function delJobPhoto(id,i){ if(STATE.jobPhotos[id]){ STATE.jobPhotos[id].splice(i,1); saveStateLocal(); editJob(id); } }
+function bumpCustomerLTV(name){
+  if(!name) return; const c=STATE.customers.find(x=>x.customer===name); if(!c) return;
+  const jobs=STATE.jobs.filter(j=>j.customer===name);
+  c.lifetimeValue=jobs.reduce((s,j)=>s+(Number(j.invoice||j.value)||0),0);
+  const last=jobs.map(j=>j.date).filter(Boolean).sort().pop(); if(last) c.lastJobDate=last;
+  touch(c);
 }
 function advanceJob(id){
   const j=STATE.jobs.find(x=>x.id===id); if(!j) return;
@@ -1116,6 +1190,7 @@ function staffShield(){
   const shield=STATE.staff.filter(s=>s.trustShield);
   let html=`<div class="note" style="margin-bottom:12px">Public-facing certified team (the §4.2 Technician Trust Shield). Mark a staff member "Show on Trust Shield" in their profile to list them here — this is the content for your Our Team page.</div>`;
   if(!shield.length) return html+emptyCard("No team members flagged for the Trust Shield yet.");
+  html+=`<button class="btn sm sec print-hide" style="margin-bottom:12px" onclick="window.print()">🖨️ Print / Save as PDF</button>`;
   html+=`<div class="grid g2">`;
   html+=shield.map(s=>`<div class="card">
     <div style="font-weight:800;font-size:16px">${esc(s.name)}</div>
@@ -1259,17 +1334,23 @@ function viewFinance(){
   const jobsComplete=STATE.jobs.filter(j=>j.status==="Complete");
   const jobsRev=jobsComplete.reduce((s,j)=>s+(Number(j.value)||0),0);
   const conv=STATE.leads.length?Math.round(STATE.leads.filter(l=>["Booked","Won"].includes(l.stage)).length/STATE.leads.length*100):0;
+  const unpaidJobs=STATE.jobs.filter(j=>j.paid==="Unpaid");
+  const unpaid=unpaidJobs.reduce((s,j)=>s+(Number(j.invoice||j.value)||0),0);
   const rev=Number(f.monthRevenue)||0, tgt=Number(f.monthTarget)||0, exp=Number(f.monthExpenses)||0;
   const tgtPct=tgt?Math.min(100,Math.round(rev/tgt*100)):0;
   let html=`<div class="page-title">Owner / Finance</div><div class="page-sub">Master view · live across all modules</div>`;
   html+=`<div class="grid g2">
     ${kpi("Open pipeline",fmtMoney(pipe),openLeads.length+" leads",true)}
-    ${kpi("Won revenue",fmtMoney(wonRev),"closed leads")}
+    ${kpi("Unpaid invoices",fmtMoney(unpaid),unpaidJobs.length+" job"+(unpaidJobs.length!==1?"s":""))}
     ${kpi("Recurring ARR",fmtMoney(arr),"active contracts")}
     ${kpi("Dev pipeline",fmtMoney(devPipe),"potential")}
     ${kpi("Completed jobs",jobsComplete.length,fmtMoney(jobsRev))}
     ${kpi("Lead conversion",conv+"%","booked / total")}
   </div>`;
+  if(unpaidJobs.length){
+    html+=`<div class="section-h"><h2>💸 Unpaid jobs</h2><div class="spacer"></div><button class="btn sm sec" onclick="go('schedule')">Schedule</button></div>`;
+    html+=unpaidJobs.slice(0,6).map(j=>jobRow(j)).join("");
+  }
   html+=`<div class="section-h"><h2>This month</h2><div class="spacer"></div><button class="btn sm sec" onclick="editFinance()">Edit</button></div>`;
   html+=`<div class="card"><div class="row"><div style="flex:1"><div class="note">Revenue vs target</div>
     <div style="font-size:24px;font-weight:800">${fmtMoney(rev)} <span class="note">/ ${fmtMoney(tgt)}</span></div></div></div>

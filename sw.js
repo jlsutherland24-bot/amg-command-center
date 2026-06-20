@@ -1,5 +1,5 @@
 /* Amyotte Mechanical Group — Command Center service worker */
-const CACHE_NAME = "amg-cc-v4";
+const CACHE_NAME = "amg-cc-v6";
 const ASSETS = [
   "./",
   "./index.html",
@@ -27,8 +27,10 @@ self.addEventListener("fetch", (e) => {
   const req = e.request;
   if (req.method !== "GET") return;
   const url = new URL(req.url);
-  // Never cache API calls
+  // Never cache API calls (AI or cross-device sync) — these must always hit the network
   if (url.hostname.includes("anthropic.com")) return;
+  if (url.hostname.includes("workers.dev")) return;
+  if (url.origin !== self.location.origin) return;
 
   // Network-first for the HTML document so updates land on next load
   if (req.mode === "navigate" || req.destination === "document") {
