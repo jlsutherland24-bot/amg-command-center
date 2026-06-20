@@ -1,0 +1,1520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#141414">
+<title>Amyotte Mechanical Group — Command Center</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="assets/amg_icon.png">
+<style>
+:root{
+  --bg:#141414; --bg2:#1a1b1e; --panel:#1f2125; --panel2:#26282d; --line:#33363c;
+  --txt:#e8eaed; --muted:#9aa0a6; --muted2:#71767d;
+  --blue:#3DA0D7; --blue-d:#2d7eac; --orange:#E8772E; --orange-d:#c25f1f;
+  --gold:#C9A14A; --green:#3FB950; --red:#E5534B; --warn:#D9943A;
+  --accent:var(--blue); --accent-d:var(--blue-d);
+  --radius:14px; --shadow:0 6px 22px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;height:100%}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  background:
+    radial-gradient(900px 500px at 80% -10%, rgba(232,119,46,.06), transparent),
+    radial-gradient(900px 500px at -10% 110%, rgba(61,160,215,.07), transparent),
+    var(--bg);
+  color:var(--txt); -webkit-font-smoothing:antialiased; overscroll-behavior:none;
+}
+body[data-brand="SUS"]{--accent:var(--orange);--accent-d:var(--orange-d)}
+body[data-brand="APH"]{--accent:var(--blue);--accent-d:var(--blue-d)}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,select,textarea{font-family:inherit;font-size:15px}
+a{color:var(--accent)}
+.hidden{display:none!important}
+
+/* ---------- Sign-in ---------- */
+#auth{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;
+  background:radial-gradient(700px 400px at 50% 0%, rgba(61,160,215,.10), transparent), var(--bg);z-index:50}
+.auth-card{width:100%;max-width:380px;text-align:center}
+.auth-card img.logo{width:100%;max-width:330px;margin:0 auto 18px;display:block;filter:drop-shadow(0 6px 16px rgba(0,0,0,.5))}
+.auth-card h1{font-size:18px;margin:6px 0 2px;letter-spacing:.5px}
+.auth-card p{color:var(--muted);font-size:13px;margin:0 0 20px}
+.field{text-align:left;margin-bottom:14px}
+.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.6px}
+.field input,.field select,.field textarea{width:100%;padding:12px 14px;background:var(--panel);border:1px solid var(--line);
+  border-radius:10px;color:var(--txt);outline:none}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 18px;border-radius:10px;
+  background:var(--accent);color:#fff;font-weight:700;font-size:15px;width:100%;transition:filter .15s}
+.btn:active{filter:brightness(.9)}
+.btn.sec{background:var(--panel2);color:var(--txt);border:1px solid var(--line)}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--muted)}
+.btn.sm{width:auto;padding:8px 14px;font-size:13px}
+.btn.danger{background:var(--red)}
+.err{color:var(--red);font-size:13px;min-height:18px;margin-top:4px}
+.pin-list{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.pin-user{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--panel);border:1px solid var(--line);
+  border-radius:10px;text-align:left}
+.pin-user:active{border-color:var(--accent)}
+.pin-user .av{width:36px;height:36px;border-radius:50%;background:var(--accent);display:flex;align-items:center;
+  justify-content:center;font-weight:800;color:#fff;flex-shrink:0}
+.pin-user .nm{font-weight:600}.pin-user .rl{font-size:12px;color:var(--muted)}
+
+/* ---------- App shell ---------- */
+#app{display:none;flex-direction:column;min-height:100vh;padding-bottom:78px}
+.topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:10px;padding:10px 14px;
+  background:rgba(20,20,20,.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.topbar .brandmark{height:30px}
+.topbar .spacer{flex:1}
+.brand-toggle{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:3px;gap:2px}
+.brand-toggle button{padding:6px 12px;border-radius:999px;font-size:12px;font-weight:700;color:var(--muted)}
+.brand-toggle button.on{color:#fff}
+.brand-toggle button.on[data-b="APH"]{background:var(--blue)}
+.brand-toggle button.on[data-b="SUS"]{background:var(--orange)}
+.brand-toggle button.on[data-b="ALL"]{background:var(--panel2);color:var(--txt)}
+.iconbtn{width:38px;height:38px;border-radius:10px;background:var(--panel);border:1px solid var(--line);
+  display:flex;align-items:center;justify-content:center;font-size:16px}
+.content{padding:16px 14px;max-width:1100px;margin:0 auto;width:100%}
+.page-title{font-size:22px;font-weight:800;margin:2px 0 2px}
+.page-sub{color:var(--muted);font-size:13px;margin:0 0 16px}
+
+/* ---------- Bottom nav ---------- */
+.nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;background:rgba(20,20,20,.92);
+  backdrop-filter:blur(12px);border-top:1px solid var(--line);padding:6px 4px env(safe-area-inset-bottom)}
+.nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 2px;color:var(--muted2);font-size:10px;font-weight:600}
+.nav button .ic{font-size:19px;line-height:1}
+.nav button.on{color:var(--accent)}
+
+/* ---------- Cards / grid ---------- */
+.grid{display:grid;gap:12px}
+.g2{grid-template-columns:repeat(2,1fr)}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g4{grid-template-columns:repeat(4,1fr)}
+@media(max-width:700px){.g3,.g4{grid-template-columns:repeat(2,1fr)}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+.kpi{background:linear-gradient(180deg,var(--panel),var(--bg2));border:1px solid var(--line);border-radius:var(--radius);padding:14px}
+.kpi .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
+.kpi .val{font-size:26px;font-weight:800;margin-top:4px}
+.kpi .sub{font-size:12px;color:var(--muted);margin-top:2px}
+.kpi .val.accent{color:var(--accent)}
+.section-h{display:flex;align-items:center;gap:10px;margin:22px 0 12px}
+.section-h h2{font-size:16px;margin:0;font-weight:800}
+.section-h .spacer{flex:1}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.chip.aph{background:rgba(61,160,215,.14);color:#7cc4ea;border-color:rgba(61,160,215,.3)}
+.chip.sus{background:rgba(232,119,46,.14);color:#f0a06a;border-color:rgba(232,119,46,.3)}
+.chip.emerg{background:rgba(229,83,75,.16);color:#f08a83;border-color:rgba(229,83,75,.35)}
+.chip.high{background:rgba(217,148,58,.16);color:#e6b46e;border-color:rgba(217,148,58,.35)}
+
+/* board */
+.board{display:flex;gap:12px;overflow-x:auto;padding-bottom:8px;-webkit-overflow-scrolling:touch}
+.col{flex:0 0 230px;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:10px;min-height:120px}
+.col h3{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin:2px 4px 10px;display:flex;justify-content:space-between}
+.col h3 .ct{background:var(--panel2);border-radius:999px;padding:1px 8px;color:var(--txt)}
+.lead-card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:8px}
+.lead-card:active{border-color:var(--accent)}
+.lead-card .nm{font-weight:700;font-size:14px}
+.lead-card .meta{font-size:12px;color:var(--muted);margin-top:3px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.lead-card .val{font-weight:800;color:var(--green)}
+.row{display:flex;align-items:center;gap:10px}
+.list-item{display:flex;align-items:center;gap:12px;padding:12px;background:var(--panel);border:1px solid var(--line);border-radius:12px;margin-bottom:8px}
+.list-item:active{border-color:var(--accent)}
+.list-item .main{flex:1;min-width:0}
+.list-item .main .t{font-weight:700}
+.list-item .main .s{font-size:12px;color:var(--muted);margin-top:2px;display:flex;flex-wrap:wrap;gap:6px}
+.list-item .rt{text-align:right;font-size:12px;color:var(--muted);flex-shrink:0}
+.stars{color:var(--gold);letter-spacing:1px}
+.empty{text-align:center;color:var(--muted2);padding:34px 16px;font-size:14px}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
+.toolbar select,.toolbar input{padding:9px 12px;background:var(--panel);border:1px solid var(--line);border-radius:9px;color:var(--txt);font-size:13px}
+.tabs{display:flex;gap:6px;margin-bottom:16px;border-bottom:1px solid var(--line);overflow-x:auto}
+.tabs button{padding:10px 14px;font-size:13px;font-weight:700;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap}
+.tabs button.on{color:var(--accent);border-bottom-color:var(--accent)}
+.fab{position:fixed;right:18px;bottom:90px;z-index:25;width:56px;height:56px;border-radius:50%;background:var(--accent);
+  color:#fff;font-size:28px;box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center}
+
+/* modal */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:60;display:flex;align-items:flex-end;justify-content:center;padding:0}
+@media(min-width:600px){.modal-bg{align-items:center;padding:20px}}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:18px 18px 0 0;width:100%;max-width:520px;
+  max-height:92vh;overflow-y:auto;padding:18px 16px 26px}
+@media(min-width:600px){.modal{border-radius:18px}}
+.modal h2{margin:2px 0 14px;font-size:18px}
+.modal .field{margin-bottom:12px}
+.modal-actions{display:flex;gap:10px;margin-top:8px}
+.modal-actions .btn{flex:1}
+.grab{width:40px;height:4px;background:var(--line);border-radius:999px;margin:0 auto 14px}
+.ai-box{background:var(--bg2);border:1px dashed var(--accent);border-radius:10px;padding:12px;font-size:14px;white-space:pre-wrap;margin-top:8px;line-height:1.45}
+.note{font-size:12px;color:var(--muted)}
+.banner{background:linear-gradient(110deg,rgba(61,160,215,.12),rgba(232,119,46,.12));border:1px solid var(--line);
+  border-radius:var(--radius);padding:14px;display:flex;gap:14px;align-items:center;margin-bottom:16px}
+.banner video{width:120px;border-radius:10px;background:#000}
+.banner .bt{font-weight:800}.banner .bs{font-size:12px;color:var(--muted)}
+.progress{height:7px;background:var(--panel2);border-radius:999px;overflow:hidden;margin-top:8px}
+.progress > i{display:block;height:100%;background:var(--accent);border-radius:999px}
+.flag-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.toast{position:fixed;bottom:96px;left:50%;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--line);
+  color:var(--txt);padding:11px 18px;border-radius:999px;z-index:80;font-size:13px;box-shadow:var(--shadow);opacity:0;transition:opacity .2s}
+.toast.show{opacity:1}
+.linkrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.linkrow a{font-size:12px;background:var(--panel2);border:1px solid var(--line);padding:6px 10px;border-radius:8px;text-decoration:none;color:var(--txt)}
+</style>
+</head>
+<body data-brand="ALL">
+
+<!-- ===================== SIGN IN ===================== -->
+<div id="auth">
+  <div class="auth-card">
+    <img class="logo" src="assets/amg_logo.png" alt="Amyotte Mechanical Group" onerror="this.style.display='none'">
+    <div id="authBody"></div>
+  </div>
+</div>
+
+<!-- ===================== APP ===================== -->
+<div id="app">
+  <div class="topbar">
+    <img class="brandmark" src="assets/amg_icon.png" alt="AMG" onerror="this.style.display='none'">
+    <div class="brand-toggle" id="brandToggle">
+      <button data-b="ALL" onclick="setBrand('ALL')">All</button>
+      <button data-b="APH" onclick="setBrand('APH')">Plumbing</button>
+      <button data-b="SUS" onclick="setBrand('SUS')">Suck-U-Sump</button>
+    </div>
+    <div class="spacer"></div>
+    <button class="iconbtn" title="Settings" onclick="go('settings')">⚙️</button>
+  </div>
+  <div class="content" id="view"></div>
+</div>
+
+<!-- bottom nav -->
+<div class="nav" id="nav" style="display:none">
+  <button data-p="dashboard" onclick="go('dashboard')"><span class="ic">📊</span>Dashboard</button>
+  <button data-p="leads" onclick="go('leads')"><span class="ic">🎯</span>Leads</button>
+  <button data-p="schedule" onclick="go('schedule')"><span class="ic">🗓️</span>Schedule</button>
+  <button data-p="customers" onclick="go('customers')"><span class="ic">⭐</span>Customers</button>
+  <button data-p="more" onclick="go('more')"><span class="ic">⋯</span>More</button>
+</div>
+
+<div id="modalRoot"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* =========================================================
+   Amyotte Mechanical Group — Command Center
+   Single-file PWA. localStorage primary. Templates-first AI.
+   ========================================================= */
+const APP_VERSION = "v4.0";
+const STORE_KEY = "amg_cc_state_v1";
+
+/* ---- option lists ---- */
+const CITIES = ["Edmonton","Sherwood Park","Beaumont","St. Albert","Leduc","Fort Saskatchewan","Spruce Grove","Other"];
+const SERVICE_TYPES = ["Emergency plumbing","HVAC / furnace","Hot water tank","Boiler","Bathroom reno","Grease trap","Sump / catch basin","Septic","Line steaming","Backflow","Video inspection","Other"];
+const SOURCES = ["Phone","Website form","Web chat","Google LSA","Facebook","Instagram","Referral","Cross-dispatch","Repeat customer"];
+const LEAD_STAGES = ["New","Contacted","Qualified","Quoted","Booked","Won","Lost"];
+const DEV_STAGES = ["Identified","Researching","Contacted","Site visit","Bid submitted","Won","Lost"];
+const DEV_TYPES = ["New residential build","Commercial new-build","Multi-family / high-rise","Retail / mall","Industrial","Reno / tenant build-out"];
+const DEV_SOURCES = ["Permit data","Referral","LinkedIn","Drive-by","Existing client","Other"];
+const CUST_TYPES = ["Residential","Commercial","Property Mgmt","Restaurant / QSR","Industrial"];
+const RELATIONSHIPS = ["New","Repeat","VIP","At-risk"];
+const REVIEW_PLATFORMS = ["Google","Facebook","BBB"];
+const REP_PLATFORMS = ["Google","BBB","YellowPages","Facebook"];
+const REP_FLAGS = ["Needs response","Responded","Resolved","Watch"];
+const PRIORITIES = ["Emergency","High","Normal"];
+const JOB_STATUS = ["Scheduled","Dispatched","In progress","Complete"];
+const PART_LOC = ["Warehouse","Van"];
+const PART_BRAND = ["APH","SUS","Shared"];
+const STAFF_ROLES = ["Journeyman Plumber","Registered Apprentice","HVAC Specialist","Gasfitter Class A","Gasfitter Class B","Vac Truck Operator","Office / Dispatch","Owner"];
+const CERT_TYPES = ["Journeyman Plumber","Registered Apprentice","HVAC Specialist","Gasfitter Class A","Gasfitter Class B","Backflow Tester","Other"];
+const CONTRACT_TIERS = ["Quarterly","Bi-Annual","Annual","Monthly"];
+const CONTRACT_SERVICES = ["Grease trap","Sump / catch basin","Line steaming","Septic","Bundled mechanical"];
+const CONTRACT_STATUS = ["Prospect","Pending","Active","Expired"];
+const FREQ_DAYS = {Monthly:30,Quarterly:91,"Bi-Annual":182,Annual:365};
+
+/* ---- fresh state ---- */
+const FRESH_STATE = {
+  me:{name:"",role:"",master:false},
+  accounts:{},                 // name -> {salt,hash,role,master}
+  masterUser:"Cory Amyotte",
+  signInLog:[],
+  brand:"ALL",
+  leads:[], customers:[], reviewRequests:[], reputation:[], developments:[],
+  jobs:[], inventory:[], staff:[], contracts:[],
+  presenceScore:{ googleAPH:"", googleSUS:"", volMonth:"", igFollowers:"" },
+  finance:{ monthRevenue:"", monthTarget:"", avgJobValue:"", monthExpenses:"" },
+  apiKey:"",                   // Anthropic key (master sets; stored locally only)
+  sync:{ enabled:false, url:"", secret:"", lastPull:0 },
+  tombstones:[],               // [{coll,id,ts}] deletion markers for cross-device merge
+  metaTs:{ presenceScore:0, finance:0 },
+  welcomed:false,              // first-run welcome shown (local UI pref)
+  hideChecklist:false,         // getting-started checklist dismissed (local UI pref)
+  fields:{}
+};
+const SYNCED=["leads","customers","reviewRequests","reputation","developments","jobs","inventory","staff","contracts"];
+let STATE = null;
+
+/* ---- persistence + migration ---- */
+function deepMerge(base, over){
+  if(Array.isArray(base)) return Array.isArray(over)? over : base;
+  if(base && typeof base==="object"){
+    const out = Array.isArray(base)? [] : {...base};
+    for(const k in over){
+      if(over[k] && typeof over[k]==="object" && !Array.isArray(over[k]) && base[k] && typeof base[k]==="object")
+        out[k]=deepMerge(base[k],over[k]);
+      else out[k]=over[k];
+    }
+    return out;
+  }
+  return over===undefined? base : over;
+}
+function loadState(){
+  try{
+    const saved = JSON.parse(localStorage.getItem(STORE_KEY) || "null");
+    STATE = saved ? deepMerge(JSON.parse(JSON.stringify(FRESH_STATE)), saved)
+                  : JSON.parse(JSON.stringify(FRESH_STATE));
+  }catch(e){ STATE = JSON.parse(JSON.stringify(FRESH_STATE)); }
+}
+function saveStateLocal(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(STATE)); }catch(e){ toast("Storage full — export a backup"); } }
+function saveState(){ saveStateLocal(); scheduleSync(); }
+window.addEventListener("visibilitychange", ()=>{ if(document.hidden){ saveStateLocal(); if(syncEnabled()) syncPushNow(); } });
+window.addEventListener("pagehide", ()=>{ saveStateLocal(); });
+
+/* =========================================================
+   CROSS-DEVICE SYNC (Cloudflare Worker + D1)
+   Record-level last-write-wins. Debounced push on save (never on keystroke).
+   ========================================================= */
+function syncEnabled(){ return !!(STATE.sync && STATE.sync.enabled && STATE.sync.url && STATE.sync.secret); }
+function syncUrl(){ return (STATE.sync.url||"").replace(/\/+$/,""); }
+// create or update a record in a synced collection, stamping _ts for merge
+function upsert(coll, rec, id){
+  rec._ts=Date.now();
+  if(id){ const i=STATE[coll].findIndex(x=>x.id===id); if(i>=0){ STATE[coll][i]={...STATE[coll][i],...rec}; return STATE[coll][i]; } }
+  if(!rec.id) rec.id=uid();
+  if(!rec.createdAt) rec.createdAt=nowISO();
+  STATE[coll].unshift(rec); return rec;
+}
+// stamp an in-place mutation so it wins on merge
+function touch(rec){ if(rec) rec._ts=Date.now(); }
+// delete with a tombstone so the deletion propagates across devices
+function softDelete(coll,id){
+  STATE[coll]=STATE[coll].filter(x=>x.id!==id);
+  STATE.tombstones.push({coll,id,ts:Date.now()});
+  if(STATE.tombstones.length>800) STATE.tombstones=STATE.tombstones.slice(-800);
+}
+function mergeRecords(localArr, remoteArr, tomb){
+  const map={}; (localArr||[]).forEach(r=>{ if(r&&r.id) map[r.id]=r; });
+  (remoteArr||[]).forEach(r=>{ if(!r||!r.id) return; const cur=map[r.id]; if(!cur || (r._ts||0)>(cur._ts||0)) map[r.id]=r; });
+  let out=Object.keys(map).map(k=>map[k]);
+  if(tomb&&tomb.length) out=out.filter(r=>!tomb.some(t=>t.id===r.id && (t.ts||0)>=(r._ts||0)));
+  return out;
+}
+function mergeState(remote){
+  if(!remote) return;
+  const allTomb=[...(STATE.tombstones||[]),...(remote.tombstones||[])];
+  SYNCED.forEach(coll=>{ STATE[coll]=mergeRecords(STATE[coll], remote[coll], allTomb.filter(t=>t.coll===coll)); });
+  const tmap={}; allTomb.forEach(t=>{ const k=t.coll+"|"+t.id; if(!tmap[k]||t.ts>tmap[k].ts) tmap[k]=t; });
+  STATE.tombstones=Object.keys(tmap).map(k=>tmap[k]).slice(-800);
+  ["presenceScore","finance"].forEach(k=>{
+    const rTs=(remote.metaTs&&remote.metaTs[k])||0, lTs=(STATE.metaTs&&STATE.metaTs[k])||0;
+    if(rTs>lTs && remote[k]){ STATE[k]=remote[k]; STATE.metaTs[k]=rTs; }
+  });
+}
+function syncPayload(){
+  const p={tombstones:STATE.tombstones||[], metaTs:STATE.metaTs||{}, presenceScore:STATE.presenceScore, finance:STATE.finance};
+  SYNCED.forEach(c=>p[c]=STATE[c]);
+  return p;
+}
+async function syncPull(){
+  if(!syncEnabled()) return false;
+  try{
+    const r=await fetch(syncUrl()+"/state",{headers:{"X-AMG-Secret":STATE.sync.secret}});
+    if(!r.ok) return false;
+    const d=await r.json();
+    if(d && d.data){ mergeState(d.data); STATE.sync.lastPull=d.serverTs||Date.now(); saveStateLocal(); if(document.getElementById("app").style.display!=="none") render(); }
+    return true;
+  }catch(e){ return false; }
+}
+async function syncPushNow(){
+  if(!syncEnabled()) return false;
+  try{
+    await syncPull(); // pull-merge first to avoid clobbering another device
+    const r=await fetch(syncUrl()+"/state",{method:"POST",
+      headers:{"Content-Type":"application/json","X-AMG-Secret":STATE.sync.secret},
+      body:JSON.stringify({data:syncPayload()})});
+    return r.ok;
+  }catch(e){ return false; }
+}
+let _syncTimer=null;
+function scheduleSync(){ if(!syncEnabled()) return; clearTimeout(_syncTimer); _syncTimer=setTimeout(syncPushNow,3000); }
+async function syncTest(url,secret){
+  try{ const r=await fetch(url.replace(/\/+$/,"")+"/test",{headers:{"X-AMG-Secret":secret}}); return r.ok; }catch(e){ return false; }
+}
+
+/* ---- util ---- */
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
+function nowISO(){ return new Date().toISOString(); }
+function today(){ return new Date().toISOString().slice(0,10); }
+function fmtMoney(n){ n=Number(n)||0; return "$"+n.toLocaleString(); }
+function fmtDate(d){ if(!d) return ""; const x=new Date(d); if(isNaN(x)) return d; return x.toLocaleDateString("en-CA",{month:"short",day:"numeric"}); }
+function daysUntil(d){ if(!d) return null; return Math.ceil((new Date(d)-new Date(today()))/86400000); }
+function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._x); t._x=setTimeout(()=>t.classList.remove("show"),2200); }
+
+/* tiny salted hash for PIN (local gate only) */
+function hashPin(pin, salt){
+  let h=5381; const s=salt+"|"+pin;
+  for(let i=0;i<s.length;i++){ h=((h<<5)+h)+s.charCodeAt(i); h|=0; }
+  return String(h>>>0);
+}
+function newSalt(){ return Math.random().toString(36).slice(2,10); }
+
+/* =========================================================
+   AUTH
+   ========================================================= */
+function renderAuth(){
+  const body=document.getElementById("authBody");
+  const names=Object.keys(STATE.accounts);
+  if(names.length===0){
+    body.innerHTML = `
+      <h1>Welcome</h1>
+      <p>Create the owner (master) account to begin.</p>
+      <div class="field"><label>Your name</label><input id="suName" value="Cory Amyotte"></div>
+      <div class="field"><label>Role</label><input id="suRole" value="Owner"></div>
+      <div class="field"><label>Create a 4-digit PIN</label><input id="suPin" type="tel" maxlength="8" inputmode="numeric" placeholder="••••"></div>
+      <div class="err" id="suErr"></div>
+      <button class="btn" onclick="createMaster()">Create account</button>
+      <p class="note" style="margin-top:14px">Data is stored on this device. Add team members later in Settings.</p>`;
+  } else {
+    body.innerHTML = `
+      <h1>Sign in</h1>
+      <p>Select your account.</p>
+      <div class="pin-list">${names.map(n=>{
+        const a=STATE.accounts[n];
+        return `<button class="pin-user" onclick="pickUser('${esc(n)}')">
+          <span class="av">${esc(n.slice(0,1).toUpperCase())}</span>
+          <span><span class="nm">${esc(n)}</span><br><span class="rl">${esc(a.role||"")}${a.master?" · Master":""}</span></span>
+        </button>`;}).join("")}</div>`;
+  }
+}
+function createMaster(){
+  const name=val("suName").trim(), role=val("suRole").trim()||"Owner", pin=val("suPin").trim();
+  if(!name) return setErr("suErr","Enter your name");
+  if(pin.length<4) return setErr("suErr","PIN must be at least 4 digits");
+  const salt=newSalt();
+  STATE.accounts[name]={salt,hash:hashPin(pin,salt),role,master:true};
+  STATE.masterUser=name; saveState();
+  doSignIn(name);
+}
+function pickUser(name){
+  const body=document.getElementById("authBody");
+  const a=STATE.accounts[name];
+  body.innerHTML=`
+    <h1>${esc(name)}</h1>
+    <p>${esc(a.role||"")}${a.master?" · Master account":""}</p>
+    <div class="field"><label>Enter PIN</label><input id="piPin" type="tel" maxlength="8" inputmode="numeric" placeholder="••••" autofocus></div>
+    <div class="err" id="piErr"></div>
+    <button class="btn" onclick="tryPin('${esc(name)}')">Sign in</button>
+    <button class="btn ghost" style="margin-top:10px" onclick="renderAuth()">Back</button>`;
+  setTimeout(()=>{ const el=document.getElementById("piPin"); if(el) el.focus(); },50);
+}
+function tryPin(name){
+  const a=STATE.accounts[name], pin=val("piPin").trim();
+  if(!a) return;
+  if(hashPin(pin,a.salt)!==a.hash) return setErr("piErr","Incorrect PIN");
+  doSignIn(name);
+}
+function doSignIn(name){
+  const a=STATE.accounts[name];
+  STATE.me={name,role:a.role||"",master:!!a.master};
+  STATE.signInLog.unshift({name,ts:nowISO()});
+  STATE.signInLog=STATE.signInLog.slice(0,60);
+  saveState();
+  document.getElementById("auth").classList.add("hidden");
+  document.getElementById("app").style.display="flex";
+  document.getElementById("nav").style.display="flex";
+  setBrand(STATE.brand||"ALL");
+  go(currentPage||"dashboard");
+  if(syncEnabled()) syncPull();
+  if(!STATE.welcomed) setTimeout(showWelcome,350);
+}
+function signOut(){
+  STATE.me={name:"",role:"",master:false}; saveState();
+  document.getElementById("app").style.display="none";
+  document.getElementById("nav").style.display="none";
+  document.getElementById("auth").classList.remove("hidden");
+  renderAuth();
+}
+function isMaster(){ return STATE.me && STATE.me.master; }
+
+/* small DOM helpers */
+function val(id){ const e=document.getElementById(id); return e? e.value : ""; }
+function setErr(id,m){ const e=document.getElementById(id); if(e) e.textContent=m; }
+
+/* =========================================================
+   NAV / BRAND
+   ========================================================= */
+let currentPage="dashboard";
+function setBrand(b){
+  STATE.brand=b; saveState();
+  document.body.setAttribute("data-brand", b);
+  document.querySelectorAll("#brandToggle button").forEach(btn=>btn.classList.toggle("on", btn.dataset.b===b));
+  if(document.getElementById("app").style.display!=="none") render();
+}
+function brandMatch(itemBrand){
+  if(STATE.brand==="ALL") return true;
+  if(!itemBrand) return true;
+  if(itemBrand==="Both") return true;
+  return itemBrand===STATE.brand;
+}
+const MORE_PAGES=["more","developments","inventory","staff","contracts","finance","help","settings"];
+function go(p){
+  currentPage=p;
+  const navMatch = MORE_PAGES.includes(p) ? "more" : p;
+  document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("on", b.dataset.p===navMatch));
+  render(); window.scrollTo(0,0);
+}
+function render(){
+  const v=document.getElementById("view");
+  const pages={dashboard:viewDashboard,leads:viewLeads,schedule:viewSchedule,customers:viewCustomers,
+    more:viewMore,developments:viewDevelopments,inventory:viewInventory,staff:viewStaff,
+    contracts:viewContracts,finance:viewFinance,help:viewHelp,settings:viewSettings};
+  v.innerHTML = (pages[currentPage]||viewDashboard)();
+  mountFab();
+}
+function mountFab(){
+  const old=document.getElementById("fab"); if(old) old.remove();
+  const map={leads:["+ Lead",()=>editLead()],customers:["+ Add",()=>customerFabMenu()],
+    developments:["+ Project",()=>editDev()],schedule:["+ Job",()=>editJob()],
+    inventory:["+ Part",()=>editPart()],staff:["+ Staff",()=>editStaff()],contracts:["+ Contract",()=>editContract()]};
+  if(map[currentPage]){
+    const f=document.createElement("button"); f.id="fab"; f.className="fab"; f.textContent="+";
+    f.title=map[currentPage][0]; f.onclick=map[currentPage][1];
+    document.body.appendChild(f);
+  }
+}
+function viewMore(){
+  const items=[
+    ["developments","🏗️","Developments","New construction & commercial pipeline"],
+    ["schedule","🗓️","Schedule & Dispatch","Jobs, technicians, status"],
+    ["inventory","📦","Inventory","Parts, stock, van manifests"],
+    ["staff","👷","Staff & Trust Shield","Team, certifications, training"],
+    ["contracts","📄","Compliance Contracts","Suck-U-Sump recurring B2B"],
+    ["finance","💰","Owner / Finance","KPIs & revenue"+(isMaster()?"":" (master only)")],
+    ["help","❓","Help & Guide","How everything works"],
+    ["settings","⚙️","Settings","Backup, team, sync, AI key"]
+  ];
+  let html=`<div class="page-title">More</div><div class="page-sub">All modules</div><div class="grid g2">`;
+  html+=items.map(i=>`<div class="card" style="cursor:pointer" onclick="go('${i[0]}')">
+    <div style="font-size:26px">${i[1]}</div>
+    <div style="font-weight:800;margin-top:6px">${esc(i[2])}</div>
+    <div class="note" style="margin-top:2px">${esc(i[3])}</div></div>`).join("");
+  html+=`</div>`;
+  return html;
+}
+function viewHelp(){
+  function row(ic,t,d){ return `<div class="list-item"><div style="font-size:22px;flex-shrink:0">${ic}</div><div class="main"><div class="t">${t}</div><div class="s">${esc(d)}</div></div></div>`; }
+  let html=`<div class="page-title">Help &amp; Guide</div><div class="page-sub">Everything in plain language</div>`;
+  html+=`<div class="banner"><video src="assets/amg_intro.mp4" muted playsinline controls poster="assets/amg_logo_frame.png" onerror="this.style.display='none'"></video>
+    <div><div class="bt">Your Command Center</div><div class="bs">One hub for both brands. Tap the bottom buttons to move around; the round + button adds new items.</div></div></div>`;
+  html+=`<div class="section-h"><h2>What each screen does</h2></div>`;
+  html+=row("📊","Dashboard","Your morning view — today's jobs, who to follow up with, reviews to answer, low stock, and services due.");
+  html+=row("🎯","Leads","Every new customer enquiry. Drag through New → Won. Tap ✨ for an AI-written follow-up text.");
+  html+=row("🗓️","Schedule","Book jobs by day, assign a tech, and tap ▶ to move a job from Scheduled to Complete.");
+  html+=row("⭐","Customers","Your customer list, review requests you've sent, bad reviews to answer, and your star-rating scoreboard.");
+  html+=row("🏗️","Developments","New construction & commercial projects to chase, with bid-due reminders.");
+  html+=row("📦","Inventory","Parts on hand. Tap − / + to adjust. Low items flag automatically; ✨ drafts a supplier order.");
+  html+=row("👷","Staff & Trust Shield","Your team, their certifications, and the public 'verified technicians' list for your website.");
+  html+=row("📄","Contracts","Suck-U-Sump recurring contracts. 'Log service' files a manifest and sets the next date for you.");
+  html+=row("💰","Owner / Finance","Owner-only money view — pipeline, revenue, recurring contract value, and this month vs target.");
+  html+=`<div class="section-h"><h2>Put it on your phone</h2></div>`;
+  html+=`<div class="card"><div class="note">Open the app's web link in your phone browser, then use the browser menu → <b>Add to Home Screen</b>. It installs like a normal app and works offline. Full steps are in <b>START_HERE.md</b>.</div></div>`;
+  html+=`<div class="section-h"><h2>Sharing with your team (sync)</h2></div>`;
+  html+=`<div class="card"><div class="note">By default your data lives on this one device. To share live across phones and the office, do the one-time sync setup in <b>SYNC_SETUP.md</b>, then enter the same link + secret on each device under Settings → Cross-device sync. Until then, use Settings → Export/Import backup to move data.</div></div>`;
+  html+=`<div class="section-h"><h2>AI drafts</h2></div>`;
+  html+=`<div class="card"><div class="note">The ✨ buttons write follow-ups, review replies, and outreach for you. They work instantly with smart templates. For AI-polished wording, the owner can add an Anthropic key in Settings (optional, pennies).</div></div>`;
+  html+=`<div class="section-h"><h2>Try it</h2></div>`;
+  html+=`<div class="row" style="gap:10px;flex-wrap:wrap"><button class="btn sm sec" onclick="loadSampleData();go('dashboard')">Load sample data</button><button class="btn sm ghost" onclick="go('settings')">Open Settings</button></div>`;
+  html+=`<div style="height:20px"></div>`;
+  return html;
+}
+function gettingStarted(){
+  if(STATE.hideChecklist) return "";
+  const steps=[
+    ["Create your owner account","done",null],
+    ["Add or load your first lead", STATE.leads.length?"done":"todo","leads"],
+    ["Schedule a job", STATE.jobs.length?"done":"todo","schedule"],
+    ["Add your team", STATE.staff.length?"done":"todo","staff"],
+    ["Turn on cross-device sync", syncEnabled()?"done":"todo","settings"]
+  ];
+  const done=steps.filter(s=>s[1]==="done").length;
+  if(done===steps.length) return "";
+  let html=`<div class="card" style="margin-bottom:16px"><div class="row"><div style="flex:1"><div style="font-weight:800">Getting started</div><div class="note">${done} of ${steps.length} done</div></div><button class="btn sm ghost" onclick="STATE.hideChecklist=true;saveStateLocal();render()">Hide</button></div>`;
+  html+=`<div class="progress" style="margin:10px 0 12px"><i style="width:${Math.round(done/steps.length*100)}%"></i></div>`;
+  html+=steps.map(s=>`<div class="row" style="padding:5px 0;${s[2]&&s[1]==="todo"?"cursor:pointer":""}" ${s[2]&&s[1]==="todo"?`onclick="go('${s[2]}')"`:""}>
+    <span style="font-size:16px">${s[1]==="done"?"✅":"⬜"}</span>
+    <span style="flex:1;${s[1]==="done"?"opacity:.6":""}">${esc(s[0])}</span>
+    ${s[2]&&s[1]==="todo"?'<span class="note">Open ›</span>':""}</div>`).join("");
+  html+=`</div>`;
+  return html;
+}
+
+/* =========================================================
+   DASHBOARD
+   ========================================================= */
+function brandFilter(arr){ return arr.filter(x=>brandMatch(x.brand)); }
+function viewDashboard(){
+  const leads=brandFilter(STATE.leads);
+  const openLeads=leads.filter(l=>!["Won","Lost"].includes(l.stage));
+  const won=leads.filter(l=>l.stage==="Won");
+  const booked=leads.filter(l=>["Booked","Won"].includes(l.stage));
+  const conv=leads.length? Math.round(booked.length/leads.length*100):0;
+  const pipeVal=openLeads.reduce((s,l)=>s+(Number(l.value)||0),0);
+  const followups=leadFollowups();
+  const xdispatch=STATE.leads.filter(l=>l.crossDispatch&&l.crossDispatch.flag&&!["Won","Lost"].includes(l.stage));
+  const devs=brandFilter(STATE.developments).filter(d=>!["Won","Lost"].includes(d.stage));
+  const devVal=devs.reduce((s,d)=>s+(Number(d.estValue)||0),0);
+  const bidsDue=STATE.developments.filter(d=>d.bidDueDate && daysUntil(d.bidDueDate)!=null && daysUntil(d.bidDueDate)<=14 && !["Won","Lost"].includes(d.stage));
+  const needResp=STATE.reputation.filter(r=>r.flag==="Needs response");
+  const jobsToday=brandFilter(STATE.jobs).filter(j=>j.date===today() && j.status!=="Complete").sort((a,b)=>((a.time||"")>(b.time||"")?1:-1));
+  const lowStock=STATE.inventory.filter(p=>(STATE.brand==="ALL"||p.brand==="Shared"||p.brand===STATE.brand) && Number(p.qty)<=Number(p.reorderPoint||0));
+  const svcDue=STATE.contracts.filter(c=>(STATE.brand==="ALL"||c.brand===STATE.brand||c.brand==="Both") && c.status==="Active" && c.nextServiceDate && daysUntil(c.nextServiceDate)!=null && daysUntil(c.nextServiceDate)<=14);
+  const activeContracts=STATE.contracts.filter(c=>c.status==="Active");
+  const arr=activeContracts.reduce((s,c)=>s+(Number(c.annualValue)||0),0);
+  const hr=new Date().getHours();
+  const greet = hr<12?"Good morning":hr<17?"Good afternoon":"Good evening";
+
+  let html=`<div class="page-title">${greet}, ${esc(STATE.me.name.split(" ")[0]||"")}</div>
+    <div class="page-sub">${brandLabel()} · ${new Date().toLocaleDateString("en-CA",{weekday:"long",month:"long",day:"numeric"})}</div>`;
+
+  html+=`<div class="banner">
+    <video src="assets/amg_intro.mp4" muted playsinline controls poster="assets/amg_logo_frame.png" onerror="this.style.display='none'"></video>
+    <div><div class="bt">Amyotte Mechanical Group</div>
+    <div class="bs">Family owned · Edmonton · Est. 1977 — "Quality costs more to make. We would rather explain the difference than apologize for its absence."</div></div>
+  </div>`;
+
+  html+=gettingStarted();
+
+  html+=`<div class="grid g4">
+    ${kpi("Open leads",openLeads.length,fmtMoney(pipeVal)+" pipeline",true)}
+    ${kpi("Conversion",conv+"%","booked / total leads")}
+    ${kpi("Follow-ups due",followups.length, followups.length?"needs action today":"all clear")}
+    ${kpi("Cross-dispatch",xdispatch.length,"pending hand-off")}
+  </div>`;
+
+  html+=`<div class="grid g4" style="margin-top:12px">
+    ${kpi("Jobs today",jobsToday.length, jobsToday.length?"scheduled":"none")}
+    ${kpi("Dev pipeline",devs.length,fmtMoney(devVal)+" potential")}
+    ${kpi("Recurring ARR",fmtMoney(arr),activeContracts.length+" contracts")}
+    ${kpi("Reviews to answer",needResp.length, needResp.length?"flagged":"none")}
+  </div>`;
+
+  // action lists
+  if(jobsToday.length){
+    html+=`<div class="section-h"><h2>🗓️ Today's jobs</h2><div class="spacer"></div><button class="btn sm sec" onclick="go('schedule')">View all</button></div>`;
+    html+=jobsToday.slice(0,6).map(j=>jobRow(j)).join("");
+  }
+  if(followups.length){
+    html+=`<div class="section-h"><h2>⏰ Follow-ups due</h2></div>`;
+    html+=followups.slice(0,6).map(l=>leadRow(l,true)).join("");
+  }
+  if(xdispatch.length){
+    html+=`<div class="section-h"><h2>🔁 Cross-dispatch queue</h2><div class="spacer"></div></div>`;
+    html+=xdispatch.slice(0,5).map(l=>`<div class="list-item" onclick="editLead('${l.id}')">
+      <div class="main"><div class="t">${esc(l.name)} ${brandChip(l.brand)}</div>
+      <div class="s">${esc(l.crossDispatch.note||"Referral to other brand")}${l.crossDispatch.fromTech?" · from "+esc(l.crossDispatch.fromTech):""}</div></div>
+      <div class="rt">${esc(l.serviceType||"")}</div></div>`).join("");
+  }
+  if(needResp.length){
+    html+=`<div class="section-h"><h2>⚠️ Reviews needing response</h2></div>`;
+    html+=needResp.slice(0,5).map(r=>repRow(r)).join("");
+  }
+  if(svcDue.length){
+    html+=`<div class="section-h"><h2>📅 Compliance services due</h2><div class="spacer"></div><button class="btn sm sec" onclick="go('contracts')">Contracts</button></div>`;
+    html+=svcDue.slice(0,5).map(c=>`<div class="list-item" onclick="go('contracts')"><div class="main"><div class="t">${esc(c.client)}</div><div class="s">${esc(c.service||"")} · ${esc(c.tier||"")}</div></div><div class="rt">${fmtDate(c.nextServiceDate)}</div></div>`).join("");
+  }
+  if(lowStock.length){
+    html+=`<div class="section-h"><h2>📦 Low stock</h2><div class="spacer"></div><button class="btn sm sec" onclick="go('inventory')">Inventory</button></div>`;
+    html+=lowStock.slice(0,5).map(p=>`<div class="list-item" onclick="go('inventory')"><div class="main"><div class="t">${esc(p.name)}</div><div class="s">${esc(p.location||"")}${p.supplier?" · "+esc(p.supplier):""}</div></div><div class="rt" style="color:var(--red)">${Number(p.qty)||0} left</div></div>`).join("");
+  }
+  if(!jobsToday.length && !followups.length && !xdispatch.length && !needResp.length && !svcDue.length && !lowStock.length){
+    html+=`<div class="card" style="margin-top:18px"><div class="empty">✅ Nothing urgent. Add leads, jobs, or contracts to populate your command center.</div></div>`;
+  }
+  return html;
+}
+function kpi(lbl,val,sub,accent){ return `<div class="kpi"><div class="lbl">${esc(lbl)}</div><div class="val ${accent?"accent":""}">${esc(val)}</div><div class="sub">${esc(sub||"")}</div></div>`; }
+function brandLabel(){ return STATE.brand==="ALL"?"All brands":STATE.brand==="APH"?"Amyotte's Plumbing & Heating":"Suck-U-Sump"; }
+function brandChip(b){ if(b==="APH")return `<span class="chip aph">APH</span>`; if(b==="SUS")return `<span class="chip sus">SUS</span>`; if(b==="Both")return `<span class="chip aph">APH</span><span class="chip sus">SUS</span>`; return ""; }
+function leadFollowups(){ return brandFilter(STATE.leads).filter(l=>l.nextFollowUp && daysUntil(l.nextFollowUp)!=null && daysUntil(l.nextFollowUp)<=0 && !["Won","Lost"].includes(l.stage)).sort((a,b)=>(a.nextFollowUp>b.nextFollowUp?1:-1)); }
+
+/* =========================================================
+   LEADS
+   ========================================================= */
+let leadFilter={stage:"",source:""};
+function viewLeads(){
+  const all=brandFilter(STATE.leads);
+  let html=`<div class="page-title">Sales & Leads</div>
+    <div class="page-sub">${all.length} lead${all.length!==1?"s":""} · ${brandLabel()}</div>`;
+  html+=`<div class="toolbar">
+    <select onchange="leadFilter.stage=this.value;render()"><option value="">All stages</option>${LEAD_STAGES.map(s=>`<option ${leadFilter.stage===s?"selected":""}>${s}</option>`).join("")}</select>
+    <select onchange="leadFilter.source=this.value;render()"><option value="">All sources</option>${SOURCES.map(s=>`<option ${leadFilter.source===s?"selected":""}>${s}</option>`).join("")}</select>
+  </div>`;
+  let list=all;
+  if(leadFilter.stage) list=list.filter(l=>l.stage===leadFilter.stage);
+  if(leadFilter.source) list=list.filter(l=>l.source===leadFilter.source);
+
+  // pipeline board
+  html+=`<div class="board">`;
+  LEAD_STAGES.forEach(st=>{
+    const items=list.filter(l=>l.stage===st);
+    html+=`<div class="col"><h3>${st}<span class="ct">${items.length}</span></h3>`;
+    html+= items.length? items.map(l=>leadCard(l)).join("") : `<div class="note" style="padding:6px 4px">—</div>`;
+    html+=`</div>`;
+  });
+  html+=`</div>`;
+  if(!all.length) html+=`<div class="card" style="margin-top:14px"><div class="empty">No leads yet. Tap + to capture your first inbound contact.</div></div>`;
+  return html;
+}
+function leadCard(l){
+  const pr = l.priority==="Emergency"?`<span class="chip emerg">🚨</span>`:l.priority==="High"?`<span class="chip high">High</span>`:"";
+  return `<div class="lead-card" onclick="editLead('${l.id}')">
+    <div class="row"><div class="nm">${esc(l.name)}</div><div class="spacer" style="flex:1"></div>${brandChip(l.brand)}</div>
+    <div class="meta">${pr}${esc(l.serviceType||"")}${l.value?` · <span class="val">${fmtMoney(l.value)}</span>`:""}</div>
+    <div class="meta">${esc(l.source||"")}${l.city?" · "+esc(l.city):""}${l.crossDispatch&&l.crossDispatch.flag?` · 🔁`:""}</div>
+    ${l.nextFollowUp?`<div class="meta">⏰ ${fmtDate(l.nextFollowUp)}${daysUntil(l.nextFollowUp)<=0?" (due)":""}</div>`:""}
+  </div>`;
+}
+function leadRow(l){
+  return `<div class="list-item" onclick="editLead('${l.id}')">
+    <div class="main"><div class="t">${esc(l.name)} ${brandChip(l.brand)}</div>
+    <div class="s">${esc(l.serviceType||"")} · ${esc(l.stage)}${l.value?" · "+fmtMoney(l.value):""}</div></div>
+    <div class="rt">${l.nextFollowUp?fmtDate(l.nextFollowUp):""}</div></div>`;
+}
+function editLead(id){
+  const l = id? STATE.leads.find(x=>x.id===id) : null;
+  const d = l || {brand:STATE.brand==="ALL"?"APH":STATE.brand, stage:"New", priority:"Normal", source:"Phone", crossDispatch:{flag:false,note:"",fromTech:""}};
+  openModal(`
+    <h2>${l?"Edit lead":"New lead"}</h2>
+    ${F("Name","l_name",d.name,"text")}
+    <div class="grid g2">${F("Phone","l_phone",d.phone,"tel")}${F("Email","l_email",d.email,"email")}</div>
+    <div class="grid g2">${S("Brand","l_brand",["APH","SUS"],d.brand)}${S("Service","l_service",SERVICE_TYPES,d.serviceType)}</div>
+    <div class="grid g2">${S("Source","l_source",SOURCES,d.source)}${S("City","l_city",CITIES,d.city)}</div>
+    <div class="grid g2">${S("Stage","l_stage",LEAD_STAGES,d.stage)}${S("Priority","l_priority",PRIORITIES,d.priority)}</div>
+    <div class="grid g2">${F("Est. value $","l_value",d.value,"number")}${F("Next follow-up","l_follow",d.nextFollowUp,"date")}</div>
+    ${F("Assigned to","l_assigned",d.assignedTo,"text")}
+    <div class="field"><label>🔁 Cross-dispatch to other brand?</label>
+      <select id="l_xflag"><option value="no" ${d.crossDispatch&&d.crossDispatch.flag?"":"selected"}>No</option><option value="yes" ${d.crossDispatch&&d.crossDispatch.flag?"selected":""}>Yes — refer to other brand</option></select></div>
+    ${F("Cross-dispatch note / from tech","l_xnote",(d.crossDispatch&&(d.crossDispatch.note||d.crossDispatch.fromTech))||"","text")}
+    ${T("Notes","l_notes",d.notes)}
+    <div class="modal-actions">
+      <button class="btn sec" onclick="aiLeadReply('${id||""}')">✨ Draft follow-up</button>
+      <button class="btn" onclick="saveLead('${id||""}')">Save</button>
+    </div>
+    ${l?`<button class="btn ghost" style="margin-top:10px" onclick="if(confirm('Delete this lead?')){delLead('${id}')}">Delete</button>`:""}
+    ${l&&l.stage!=="Won"?`<button class="btn sec" style="margin-top:10px" onclick="promoteLeadToCustomer('${id}')">✓ Mark Won → create customer</button>`:""}
+    <div id="aiOut"></div>
+  `);
+}
+function saveLead(id){
+  const x={
+    name:val("l_name").trim(), phone:val("l_phone").trim(), email:val("l_email").trim(),
+    brand:val("l_brand"), serviceType:val("l_service"), source:val("l_source"), city:val("l_city"),
+    stage:val("l_stage"), priority:val("l_priority"), value:Number(val("l_value"))||0,
+    nextFollowUp:val("l_follow"), assignedTo:val("l_assigned").trim(), notes:val("l_notes").trim(),
+    crossDispatch:{ flag: val("l_xflag")==="yes", note: val("l_xnote").trim(), fromTech:"" }
+  };
+  if(!x.name){ toast("Name required"); return; }
+  upsert("leads",x,id);
+  saveState(); closeModal(); render(); toast("Lead saved");
+}
+function delLead(id){ softDelete("leads",id); saveState(); closeModal(); render(); toast("Lead deleted"); }
+function promoteLeadToCustomer(id){
+  const l=STATE.leads.find(x=>x.id===id); if(!l) return;
+  l.stage="Won"; l.updatedAt=nowISO(); touch(l);
+  if(!STATE.customers.some(c=>c.customer===l.name)){
+    upsert("customers",{customer:l.name,brand:l.brand,type:"Residential",lastJobDate:today(),
+      lifetimeValue:Number(l.value)||0,relationship:"New",contractCustomer:false,
+      phone:l.phone,email:l.email,notes:"Converted from lead. "+(l.notes||"")});
+  }
+  saveState(); closeModal(); render(); toast("Won — customer created");
+}
+
+/* =========================================================
+   CUSTOMERS — relations, review requests, reputation, presence
+   ========================================================= */
+let custTab="relations";
+function viewCustomers(){
+  let html=`<div class="page-title">Customer Relations & Reviews</div>
+    <div class="page-sub">${brandLabel()}</div>`;
+  html+=`<div class="tabs">
+    ${tabBtn("relations","Customers")}
+    ${tabBtn("requests","Review log")}
+    ${tabBtn("reputation","Reputation")}
+    ${tabBtn("presence","Scoreboard")}
+  </div>`;
+  if(custTab==="relations") html+=tabRelations();
+  else if(custTab==="requests") html+=tabRequests();
+  else if(custTab==="reputation") html+=tabReputation();
+  else html+=tabPresence();
+  return html;
+}
+function tabBtn(id,label){ return `<button class="${custTab===id?"on":""}" onclick="custTab='${id}';render()">${label}</button>`; }
+
+function tabRelations(){
+  const list=brandFilter(STATE.customers);
+  if(!list.length) return emptyCard("No customers yet. Win a lead or tap + to add one.");
+  return list.map(c=>`<div class="list-item" onclick="editCustomer('${c.id}')">
+    <div class="main"><div class="t">${esc(c.customer)} ${brandChip(c.brand)} ${c.contractCustomer?'<span class="chip">📄 Contract</span>':""}</div>
+    <div class="s">${esc(c.type||"")} · ${esc(c.relationship||"")}${c.lifetimeValue?" · "+fmtMoney(c.lifetimeValue):""}</div></div>
+    <div class="rt">${c.lastJobDate?fmtDate(c.lastJobDate):""}</div></div>`).join("");
+}
+function editCustomer(id){
+  const c=id?STATE.customers.find(x=>x.id===id):null;
+  const d=c||{brand:STATE.brand==="ALL"?"APH":STATE.brand,type:"Residential",relationship:"New",contractCustomer:false};
+  openModal(`<h2>${c?"Edit customer":"New customer"}</h2>
+    ${F("Customer / company","c_name",d.customer,"text")}
+    <div class="grid g2">${S("Brand","c_brand",["APH","SUS","Both"],d.brand)}${S("Type","c_type",CUST_TYPES,d.type)}</div>
+    <div class="grid g2">${F("Phone","c_phone",d.phone,"tel")}${F("Email","c_email",d.email,"email")}</div>
+    <div class="grid g2">${S("Relationship","c_rel",RELATIONSHIPS,d.relationship)}${F("Lifetime value $","c_ltv",d.lifetimeValue,"number")}</div>
+    <div class="grid g2">${F("Last job date","c_last",d.lastJobDate,"date")}
+      <div class="field"><label>Contract customer?</label><select id="c_contract"><option value="no" ${d.contractCustomer?"":"selected"}>No</option><option value="yes" ${d.contractCustomer?"selected":""}>Yes</option></select></div></div>
+    ${T("Notes","c_notes",d.notes)}
+    <div class="modal-actions">
+      <button class="btn sec" onclick="aiReviewRequest('${id||""}')">✨ Draft review request</button>
+      <button class="btn" onclick="saveCustomer('${id||""}')">Save</button></div>
+    ${c?`<button class="btn ghost" style="margin-top:10px" onclick="if(confirm('Delete?')){delRec('customers','${id}')}">Delete</button>`:""}
+    <div id="aiOut"></div>`);
+}
+function saveCustomer(id){
+  const x={customer:val("c_name").trim(),brand:val("c_brand"),type:val("c_type"),phone:val("c_phone").trim(),
+    email:val("c_email").trim(),relationship:val("c_rel"),lifetimeValue:Number(val("c_ltv"))||0,
+    lastJobDate:val("c_last"),contractCustomer:val("c_contract")==="yes",notes:val("c_notes").trim()};
+  if(!x.customer){toast("Name required");return;}
+  upsert("customers",x,id);
+  saveState();closeModal();render();toast("Customer saved");
+}
+
+function tabRequests(){
+  const list=brandFilter(STATE.reviewRequests);
+  let html=`<div class="note" style="margin-bottom:10px">Log of review requests sent after jobs (the §5.5 "60-seconds post-job" workflow).</div>`;
+  if(!list.length) return html+emptyCard("No review requests logged. Tap + then 'Log review request'.");
+  return html+list.map(r=>`<div class="list-item" onclick="editRequest('${r.id}')">
+    <div class="main"><div class="t">${esc(r.customer)} ${brandChip(r.brand)}</div>
+    <div class="s">${esc(r.platform||"")} · ${esc(r.status||"")}${r.tech?" · "+esc(r.tech):""}${r.rating?' · <span class="stars">'+"★".repeat(r.rating)+"</span>":""}</div></div>
+    <div class="rt">${r.sentAt?fmtDate(r.sentAt):""}</div></div>`).join("");
+}
+function editRequest(id){
+  const r=id?STATE.reviewRequests.find(x=>x.id===id):null;
+  const d=r||{brand:STATE.brand==="ALL"?"APH":STATE.brand,platform:"Google",status:"Sent",sentAt:today()};
+  openModal(`<h2>${r?"Edit review request":"Log review request"}</h2>
+    ${F("Customer","rq_cust",d.customer,"text")}
+    <div class="grid g2">${S("Brand","rq_brand",["APH","SUS"],d.brand)}${S("Platform","rq_plat",REVIEW_PLATFORMS,d.platform)}</div>
+    <div class="grid g2">${F("Technician","rq_tech",d.tech,"text")}${F("Sent","rq_sent",d.sentAt,"date")}</div>
+    <div class="grid g2">${S("Status","rq_status",["Sent","Opened","Reviewed","No response"],d.status)}${S("Rating","rq_rating",["","1","2","3","4","5"],d.rating)}</div>
+    ${T("Review text","rq_text",d.reviewText)}
+    <div class="modal-actions"><button class="btn" onclick="saveRequest('${id||""}')">Save</button></div>
+    ${r?`<button class="btn ghost" style="margin-top:10px" onclick="if(confirm('Delete?')){delRec('reviewRequests','${id}')}">Delete</button>`:""}`);
+}
+function saveRequest(id){
+  const x={customer:val("rq_cust").trim(),brand:val("rq_brand"),platform:val("rq_plat"),tech:val("rq_tech").trim(),
+    sentAt:val("rq_sent"),status:val("rq_status"),rating:Number(val("rq_rating"))||"",reviewText:val("rq_text").trim()};
+  if(!x.customer){toast("Customer required");return;}
+  upsert("reviewRequests",x,id);
+  saveState();closeModal();render();toast("Saved");
+}
+
+function tabReputation(){
+  const list=brandFilter(STATE.reputation);
+  let html=`<div class="note" style="margin-bottom:10px">Monitor external reviews. Flag the recurring licensing complaints for priority response (§4.2 Technician Trust Shield).</div>`;
+  if(!list.length) return html+emptyCard("No reviews tracked. Tap + then 'Track a review'.");
+  return html+list.map(r=>repRow(r)).join("");
+}
+function repRow(r){
+  const dot = r.flag==="Needs response"?"var(--red)":r.flag==="Responded"?"var(--warn)":r.flag==="Resolved"?"var(--green)":"var(--muted2)";
+  return `<div class="list-item" onclick="editRep('${r.id}')">
+    <span class="flag-dot" style="background:${dot}"></span>
+    <div class="main"><div class="t">${esc(r.platform)} ${brandChip(r.brand)} ${r.isLicensingComplaint?'<span class="chip emerg">licensing</span>':""}</div>
+    <div class="s"><span class="stars">${r.rating?"★".repeat(r.rating)+"☆".repeat(5-r.rating):""}</span> ${esc((r.summary||"").slice(0,70))}</div></div>
+    <div class="rt">${esc(r.flag||"")}</div></div>`;
+}
+function editRep(id){
+  const r=id?STATE.reputation.find(x=>x.id===id):null;
+  const d=r||{brand:STATE.brand==="ALL"?"APH":STATE.brand,platform:"Google",flag:"Needs response",rating:1,isLicensingComplaint:false};
+  openModal(`<h2>${r?"Edit review":"Track a review"}</h2>
+    <div class="grid g2">${S("Brand","rp_brand",["APH","SUS"],d.brand)}${S("Platform","rp_plat",REP_PLATFORMS,d.platform)}</div>
+    <div class="grid g2">${S("Rating","rp_rating",["1","2","3","4","5"],String(d.rating||1))}${S("Flag","rp_flag",REP_FLAGS,d.flag)}</div>
+    <div class="field"><label>Recurring licensing complaint?</label><select id="rp_lic"><option value="no" ${d.isLicensingComplaint?"":"selected"}>No</option><option value="yes" ${d.isLicensingComplaint?"selected":""}>Yes</option></select></div>
+    ${T("Review summary","rp_sum",d.summary)}
+    ${T("Your response / plan","rp_resp",d.responseNote)}
+    <div class="modal-actions">
+      <button class="btn sec" onclick="aiReviewResponse('${id||""}')">✨ Draft response</button>
+      <button class="btn" onclick="saveRep('${id||""}')">Save</button></div>
+    ${r?`<button class="btn ghost" style="margin-top:10px" onclick="if(confirm('Delete?')){delRec('reputation','${id}')}">Delete</button>`:""}
+    <div id="aiOut"></div>`);
+}
+function saveRep(id){
+  const x={brand:val("rp_brand"),platform:val("rp_plat"),rating:Number(val("rp_rating"))||1,flag:val("rp_flag"),
+    isLicensingComplaint:val("rp_lic")==="yes",summary:val("rp_sum").trim(),responseNote:val("rp_resp").trim()};
+  upsert("reputation",x,id);
+  saveState();closeModal();render();toast("Saved");
+}
+
+function tabPresence(){
+  const p=STATE.presenceScore;
+  const targets={googleAPH:4.7,googleSUS:4.8,volMonth:40,igFollowers:1500};
+  function bar(lbl,key,suffix,tgt){
+    const cur=parseFloat(p[key])||0; const pct=Math.min(100,Math.round(cur/tgt*100));
+    return `<div class="card" style="margin-bottom:10px"><div class="row"><div style="flex:1">
+      <div class="lbl" style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">${esc(lbl)}</div>
+      <div style="font-size:22px;font-weight:800">${p[key]!==""&&p[key]!=null?esc(p[key])+suffix:"—"} <span class="note">/ ${tgt}${suffix} target</span></div>
+      </div></div><div class="progress"><i style="width:${pct}%"></i></div></div>`;
+  }
+  let html=`<div class="note" style="margin-bottom:12px">Manual entry now (mirrors the KPI table §10). Update monthly; targets are the 12-month goals.</div>`;
+  html+=bar("Google rating — Amyotte's","googleAPH"," ★",targets.googleAPH);
+  html+=bar("Google rating — Suck-U-Sump","googleSUS"," ★",targets.googleSUS);
+  html+=bar("Review volume / month","volMonth","",targets.volMonth);
+  html+=bar("Instagram followers","igFollowers","",targets.igFollowers);
+  html+=`<button class="btn sec" onclick="editPresence()">Update numbers</button>`;
+  return html;
+}
+function editPresence(){
+  const p=STATE.presenceScore;
+  openModal(`<h2>Update scoreboard</h2>
+    <div class="grid g2">${F("Google ★ (APH)","ps_a",p.googleAPH,"number")}${F("Google ★ (SUS)","ps_s",p.googleSUS,"number")}</div>
+    <div class="grid g2">${F("Reviews / month","ps_v",p.volMonth,"number")}${F("Instagram followers","ps_i",p.igFollowers,"number")}</div>
+    <div class="modal-actions"><button class="btn" onclick="savePresence()">Save</button></div>`);
+}
+function savePresence(){
+  STATE.presenceScore={googleAPH:val("ps_a"),googleSUS:val("ps_s"),volMonth:val("ps_v"),igFollowers:val("ps_i")};
+  STATE.metaTs.presenceScore=Date.now();
+  saveState();closeModal();render();toast("Scoreboard updated");
+}
+function customerFabMenu(){
+  openModal(`<h2>Add</h2>
+    <button class="btn" style="margin-bottom:10px" onclick="closeModal();editCustomer()">👤 New customer</button>
+    <button class="btn sec" style="margin-bottom:10px" onclick="closeModal();editRequest()">✉️ Log review request</button>
+    <button class="btn sec" onclick="closeModal();editRep()">⭐ Track a review</button>`);
+}
+
+/* =========================================================
+   DEVELOPMENTS
+   ========================================================= */
+let devFilter={stage:""};
+function viewDevelopments(){
+  const all=brandFilter(STATE.developments.map(d=>({...d,brand:devBrand(d)})));
+  let html=`<div class="page-title">New Business / Developments</div>
+    <div class="page-sub">${all.length} project${all.length!==1?"s":""} · new construction & commercial</div>`;
+  const bids=STATE.developments.filter(d=>d.bidDueDate&&daysUntil(d.bidDueDate)!=null&&daysUntil(d.bidDueDate)<=14&&!["Won","Lost"].includes(d.stage));
+  if(bids.length){
+    html+=`<div class="section-h"><h2>📅 Bids due soon</h2></div>`;
+    html+=bids.sort((a,b)=>a.bidDueDate>b.bidDueDate?1:-1).map(d=>`<div class="list-item" onclick="editDev('${d.id}')">
+      <div class="main"><div class="t">${esc(d.projectName)}</div><div class="s">${esc(d.stage)} · ${esc(d.city||"")}</div></div>
+      <div class="rt" style="color:${daysUntil(d.bidDueDate)<=3?"var(--red)":"var(--warn)"}">${daysUntil(d.bidDueDate)}d</div></div>`).join("");
+  }
+  html+=`<div class="toolbar"><select onchange="devFilter.stage=this.value;render()"><option value="">All stages</option>${DEV_STAGES.map(s=>`<option ${devFilter.stage===s?"selected":""}>${s}</option>`).join("")}</select></div>`;
+  let list=all; if(devFilter.stage) list=list.filter(d=>d.stage===devFilter.stage);
+  html+=`<div class="board">`;
+  DEV_STAGES.forEach(st=>{
+    const items=list.filter(d=>d.stage===st);
+    const v=items.reduce((s,d)=>s+(Number(d.estValue)||0),0);
+    html+=`<div class="col"><h3>${st}<span class="ct">${items.length}</span></h3>`;
+    html+= items.length? items.map(d=>devCard(d)).join("") : `<div class="note" style="padding:6px 4px">—</div>`;
+    if(v) html+=`<div class="note" style="text-align:right;padding:4px">${fmtMoney(v)}</div>`;
+    html+=`</div>`;
+  });
+  html+=`</div>`;
+  if(!all.length) html+=emptyCard("No developments tracked. Tap + to add a project, GC, or new build.");
+  return html;
+}
+function devBrand(d){ const bf=d.brandFit||[]; if(!bf.length) return ""; if(bf.includes("Bundled")||(bf.includes("APH")&&bf.includes("SUS"))) return "Both"; if(bf.includes("SUS")) return "SUS"; if(bf.includes("APH")) return "APH"; return ""; }
+function devCard(d){
+  return `<div class="lead-card" onclick="editDev('${d.id}')">
+    <div class="nm">${esc(d.projectName)}</div>
+    <div class="meta">${esc(d.devType||"")}</div>
+    <div class="meta">${esc(d.city||"")}${d.estValue?` · <span class="val">${fmtMoney(d.estValue)}</span>`:""}</div>
+    ${d.gc?`<div class="meta">GC: ${esc(d.gc)}</div>`:""}
+    ${d.bidDueDate?`<div class="meta">📅 bid ${fmtDate(d.bidDueDate)}</div>`:""}
+  </div>`;
+}
+function editDev(id){
+  const d=id?STATE.developments.find(x=>x.id===id):null;
+  const v=d||{stage:"Identified",devType:"Commercial new-build",brandFit:["APH"],source:"Permit data"};
+  const bf=v.brandFit||[];
+  openModal(`<h2>${d?"Edit project":"New development"}</h2>
+    ${F("Project name","d_name",v.projectName,"text")}
+    <div class="grid g2">${S("Type","d_type",DEV_TYPES,v.devType)}${S("City","d_city",CITIES,v.city)}</div>
+    ${F("Address","d_addr",v.address,"text")}
+    <div class="field"><label>Brand fit</label><div class="row" style="gap:14px;flex-wrap:wrap">
+      ${["APH","SUS","Bundled"].map(b=>`<label class="note" style="display:flex;gap:6px;align-items:center"><input type="checkbox" class="d_bf" value="${b}" ${bf.includes(b)?"checked":""}> ${b}</label>`).join("")}
+    </div></div>
+    ${F("GC / developer","d_gc",v.gc,"text")}
+    <div class="grid g2">${F("Contact name","d_cname",v.contactName,"text")}${F("Contact phone","d_cphone",v.contactPhone,"tel")}</div>
+    ${F("Contact email","d_cemail",v.contactEmail,"email")}
+    <div class="grid g2">${S("Stage","d_stage",DEV_STAGES,v.stage)}${F("Est. value $","d_val",v.estValue,"number")}</div>
+    <div class="grid g2">${F("Bid due","d_bid",v.bidDueDate,"date")}${S("Source","d_source",DEV_SOURCES,v.source)}</div>
+    <div class="grid g2">${F("Next action","d_next",v.nextAction,"text")}${F("Action date","d_nextd",v.nextActionDate,"date")}</div>
+    ${T("Notes","d_notes",v.notes)}
+    <div class="modal-actions">
+      <button class="btn sec" onclick="aiDevOutreach('${id||""}')">✨ Draft outreach</button>
+      <button class="btn" onclick="saveDev('${id||""}')">Save</button></div>
+    ${d?`<button class="btn ghost" style="margin-top:10px" onclick="if(confirm('Delete?')){delRec('developments','${id}')}">Delete</button>`:""}
+    <div id="aiOut"></div>`);
+}
+function saveDev(id){
+  const bf=[...document.querySelectorAll(".d_bf:checked")].map(c=>c.value);
+  const x={projectName:val("d_name").trim(),devType:val("d_type"),city:val("d_city"),address:val("d_addr").trim(),
+    brandFit:bf,gc:val("d_gc").trim(),contactName:val("d_cname").trim(),contactPhone:val("d_cphone").trim(),
+    contactEmail:val("d_cemail").trim(),stage:val("d_stage"),estValue:Number(val("d_val"))||0,
+    bidDueDate:val("d_bid"),source:val("d_source"),nextAction:val("d_next").trim(),nextActionDate:val("d_nextd"),notes:val("d_notes").trim()};
+  if(!x.projectName){toast("Project name required");return;}
+  upsert("developments",x,id);
+  saveState();closeModal();render();toast("Project saved");
+}
+function delRec(coll,id){ softDelete(coll,id); saveState();closeModal();render();toast("Deleted"); }
+
+/* =========================================================
+   SCHEDULE / DISPATCH
+   ========================================================= */
+let schedFilter={status:""};
+function viewSchedule(){
+  const all=brandFilter(STATE.jobs);
+  let html=`<div class="page-title">Schedule & Dispatch</div>
+    <div class="page-sub">${all.length} job${all.length!==1?"s":""} · ${brandLabel()}</div>`;
+  html+=`<div class="toolbar"><select onchange="schedFilter.status=this.value;render()"><option value="">All statuses</option>${JOB_STATUS.map(s=>`<option ${schedFilter.status===s?"selected":""}>${s}</option>`).join("")}</select></div>`;
+  let list=all.slice().sort((a,b)=>((a.date||"")+(a.time||"")>(b.date||"")+(b.time||"")?1:-1));
+  if(schedFilter.status) list=list.filter(j=>j.status===schedFilter.status);
+  if(!list.length) return html+emptyCard("No jobs scheduled. Tap + to add one.");
+  const groups={}; list.forEach(j=>{ const k=j.date||"No date"; (groups[k]=groups[k]||[]).push(j); });
+  Object.keys(groups).sort().forEach(date=>{
+    const lbl = date===today()?"Today":date==="No date"?"No date":new Date(date).toLocaleDateString("en-CA",{weekday:"short",month:"short",day:"numeric"});
+    html+=`<div class="section-h"><h2>${esc(lbl)}</h2><div class="spacer"></div><span class="note">${groups[date].length}</span></div>`;
+    html+=groups[date].map(j=>jobRow(j)).join("");
+  });
+  return html;
+}
+function jobStatusColor(s){ return s==="Complete"?"var(--green)":s==="In progress"?"var(--blue)":s==="Dispatched"?"var(--warn)":"var(--muted2)"; }
+function jobRow(j){
+  return `<div class="list-item" onclick="editJob('${j.id}')">
+    <span class="flag-dot" style="background:${jobStatusColor(j.status)}"></span>
+    <div class="main"><div class="t">${esc(j.customer||"Job")} ${brandChip(j.brand)}</div>
+    <div class="s">${j.time?esc(j.time)+" · ":""}${esc(j.type||"")}${j.tech?" · "+esc(j.tech):""}${j.city?" · "+esc(j.city):""}</div></div>
+    <div class="rt">${esc(j.status||"")}${j.value?"<br>"+fmtMoney(j.value):""}</div></div>`;
+}
+function editJob(id){
+  const j=id?STATE.jobs.find(x=>x.id===id):null;
+  const d=j||{brand:STATE.brand==="ALL"?"APH":STATE.brand,status:"Scheduled",date:today()};
+  openModal(`<h2>${j?"Edit job":"New job"}</h2>
+    ${F("Customer","j_cust",d.customer,"text")}
+    <div class="grid g2">${S("Brand","j_brand",["APH","SUS"],d.brand)}${S("Service","j_type",SERVICE_TYPES,d.type)}</div>
+    <div class="grid g2">${F("Date","j_date",d.date,"date")}${F("Time","j_time",d.time,"time")}</div>
+    <div class="grid g2">${F("Technician","j_tech",d.tech,"text")}${S("Status","j_status",JOB_STATUS,d.status)}</div>
+    ${F("Address","j_addr",d.address,"text")}
+    <div class="grid g2">${S("City","j_city",CITIES,d.city)}${F("Job value $","j_value",d.value,"number")}</div>
+    ${T("Notes","j_notes",d.notes)}
+    <div class="modal-actions"><button class="btn" onclick="saveJob('${id||""}')">Save</button></div>
+    ${j&&j.status!=="Complete"?`<button class="btn sec" style="margin-top:10px" onclick="advanceJob('${id}')">▶ Advance status</button>`:""}
+    ${j?`<button class="btn ghost" style="margin-top:10px" onclick="if(confirm('Delete job?')){delRec('jobs','${id}')}">Delete</button>`:""}`);
+}
+function saveJob(id){
+  const x={customer:val("j_cust").trim(),brand:val("j_brand"),type:val("j_type"),date:val("j_date"),time:val("j_time"),
+    tech:val("j_tech").trim(),status:val("j_status"),address:val("j_addr").trim(),city:val("j_city"),
+    value:Number(val("j_value"))||0,notes:val("j_notes").trim()};
+  if(!x.customer){toast("Customer required");return;}
+  upsert("jobs",x,id);
+  saveState();closeModal();render();toast("Job saved");
+}
+function advanceJob(id){
+  const j=STATE.jobs.find(x=>x.id===id); if(!j) return;
+  const i=JOB_STATUS.indexOf(j.status); j.status=JOB_STATUS[Math.min(i+1,JOB_STATUS.length-1)]; touch(j);
+  saveState();closeModal();render();toast("Status: "+j.status);
+}
+
+/* =========================================================
+   INVENTORY
+   ========================================================= */
+function viewInventory(){
+  const all=STATE.inventory.filter(p=>STATE.brand==="ALL"||p.brand==="Shared"||p.brand===STATE.brand);
+  let html=`<div class="page-title">Inventory</div><div class="page-sub">${all.length} part${all.length!==1?"s":""} · ${brandLabel()}</div>`;
+  const low=all.filter(p=>Number(p.qty)<=Number(p.reorderPoint||0));
+  if(low.length){
+    html+=`<div class="section-h"><h2>⚠️ Low stock — reorder</h2><div class="spacer"></div><button class="btn sm sec" onclick="aiReorder()">✨ Draft PO</button></div>`;
+    html+=low.map(p=>partRow(p,true)).join("");
+    html+=`<div id="aiOut"></div>`;
+  }
+  html+=`<div class="section-h"><h2>All parts</h2></div>`;
+  if(!all.length) return html+emptyCard("No parts yet. Tap + to add inventory.");
+  html+=all.slice().sort((a,b)=>(a.name>b.name?1:-1)).map(p=>partRow(p,false)).join("");
+  return html;
+}
+function partRow(p,low){
+  const lowFlag=Number(p.qty)<=Number(p.reorderPoint||0);
+  return `<div class="list-item">
+    <div class="main" onclick="editPart('${p.id}')"><div class="t">${esc(p.name)} ${brandChip(p.brand==="Shared"?"":p.brand)} ${lowFlag?'<span class="chip emerg">low</span>':""}</div>
+    <div class="s">${p.sku?esc(p.sku)+" · ":""}${esc(p.location||"")}${p.supplier?" · "+esc(p.supplier):""}${p.unitCost?" · "+fmtMoney(p.unitCost):""}</div></div>
+    <div class="row" style="gap:6px;flex-shrink:0">
+      <button class="btn sm ghost" onclick="adjPart('${p.id}',-1)">−</button>
+      <div style="min-width:34px;text-align:center;font-weight:800;color:${lowFlag?"var(--red)":"var(--txt)"}">${Number(p.qty)||0}</div>
+      <button class="btn sm ghost" onclick="adjPart('${p.id}',1)">+</button>
+    </div></div>`;
+}
+function adjPart(id,delta){
+  const p=STATE.inventory.find(x=>x.id===id); if(!p) return;
+  p.qty=Math.max(0,(Number(p.qty)||0)+delta); touch(p); saveState();render();
+}
+function editPart(id){
+  const p=id?STATE.inventory.find(x=>x.id===id):null;
+  const d=p||{brand:"Shared",location:"Warehouse",qty:0,reorderPoint:2};
+  openModal(`<h2>${p?"Edit part":"New part"}</h2>
+    ${F("Part name","p_name",d.name,"text")}
+    <div class="grid g2">${F("SKU / part #","p_sku",d.sku,"text")}${S("Brand","p_brand",PART_BRAND,d.brand)}</div>
+    <div class="grid g2">${F("Qty on hand","p_qty",d.qty,"number")}${F("Reorder at","p_reorder",d.reorderPoint,"number")}</div>
+    <div class="grid g2">${F("Unit cost $","p_cost",d.unitCost,"number")}${S("Location","p_loc",PART_LOC,d.location)}</div>
+    ${F("Supplier","p_supplier",d.supplier,"text")}
+    ${T("Notes","p_notes",d.notes)}
+    <div class="modal-actions"><button class="btn" onclick="savePart('${id||""}')">Save</button></div>
+    ${p?`<button class="btn ghost" style="margin-top:10px" onclick="if(confirm('Delete part?')){delRec('inventory','${id}')}">Delete</button>`:""}`);
+}
+function savePart(id){
+  const x={name:val("p_name").trim(),sku:val("p_sku").trim(),brand:val("p_brand"),qty:Number(val("p_qty"))||0,
+    reorderPoint:Number(val("p_reorder"))||0,unitCost:Number(val("p_cost"))||0,location:val("p_loc"),
+    supplier:val("p_supplier").trim(),notes:val("p_notes").trim()};
+  if(!x.name){toast("Name required");return;}
+  upsert("inventory",x,id);
+  saveState();closeModal();render();toast("Part saved");
+}
+function aiReorder(){
+  const low=STATE.inventory.filter(p=>Number(p.qty)<=Number(p.reorderPoint||0));
+  const lines=low.map(p=>`- ${p.name}${p.sku?" ("+p.sku+")":""}: on hand ${p.qty||0}, reorder to ${Math.max((Number(p.reorderPoint)||0)*2,(Number(p.reorderPoint)||0)+1)}${p.supplier?" — "+p.supplier:""}`).join("\n");
+  const tmpl=`Purchase order draft — Amyotte's Mechanical Group\nDate: ${today()}\n\nPlease supply the following:\n${lines||"(no low-stock items)"}\n\nDeliver to: 4648 Eleniak Rd NW, Edmonton AB T6B 2S1\nContact: ${STATE.me.name||""} · (780) 462-5237`;
+  runAI(`Write a brief, professional purchase-order request email to a plumbing supply house from Amyotte's Mechanical Group (4648 Eleniak Rd NW, Edmonton). Items to reorder:\n${lines}\nKeep it concise and clear. No placeholders.`, tmpl);
+}
+
+/* =========================================================
+   STAFF DEVELOPMENT + TECHNICIAN TRUST SHIELD
+   ========================================================= */
+let staffTab="roster";
+function viewStaff(){
+  let html=`<div class="page-title">Staff & Trust Shield</div><div class="page-sub">${STATE.staff.length} team member${STATE.staff.length!==1?"s":""}</div>`;
+  html+=`<div class="tabs">
+    <button class="${staffTab==="roster"?"on":""}" onclick="staffTab='roster';render()">Roster</button>
+    <button class="${staffTab==="shield"?"on":""}" onclick="staffTab='shield';render()">Trust Shield</button>
+    <button class="${staffTab==="training"?"on":""}" onclick="staffTab='training';render()">Training</button>
+  </div>`;
+  if(staffTab==="roster") html+=staffRoster();
+  else if(staffTab==="shield") html+=staffShield();
+  else html+=staffTraining();
+  return html;
+}
+function staffRoster(){
+  if(!STATE.staff.length) return emptyCard("No staff yet. Tap + to add your team.");
+  return STATE.staff.map(s=>`<div class="list-item" onclick="editStaff('${s.id}')">
+    <span class="av" style="width:38px;height:38px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;flex-shrink:0">${esc((s.name||"?").slice(0,1).toUpperCase())}</span>
+    <div class="main"><div class="t">${esc(s.name)} ${s.trustShield?'<span class="chip">🛡️</span>':""}</div>
+    <div class="s">${esc(s.role||"")}${s.certNumber?" · #"+esc(s.certNumber):""}${s.yearsExp?" · "+esc(s.yearsExp)+"y":""}</div></div>
+    <div class="rt">${esc(s.brand||"")}</div></div>`).join("");
+}
+function staffShield(){
+  const shield=STATE.staff.filter(s=>s.trustShield);
+  let html=`<div class="note" style="margin-bottom:12px">Public-facing certified team (the §4.2 Technician Trust Shield). Mark a staff member "Show on Trust Shield" in their profile to list them here — this is the content for your Our Team page.</div>`;
+  if(!shield.length) return html+emptyCard("No team members flagged for the Trust Shield yet.");
+  html+=`<div class="grid g2">`;
+  html+=shield.map(s=>`<div class="card">
+    <div style="font-weight:800;font-size:16px">${esc(s.name)}</div>
+    <div class="chip aph" style="margin-top:6px">${esc(s.certType||s.role||"")}</div>
+    ${s.certNumber?`<div class="note" style="margin-top:8px">Alberta cert #${esc(s.certNumber)}</div>`:""}
+    ${s.yearsExp?`<div class="note">${esc(s.yearsExp)} years experience</div>`:""}
+    ${s.specialties?`<div class="note" style="margin-top:4px">${esc(s.specialties)}</div>`:""}
+  </div>`).join("");
+  html+=`</div>`;
+  return html;
+}
+function staffTraining(){
+  if(!STATE.staff.length) return emptyCard("Add staff first to track training.");
+  return STATE.staff.map(s=>{
+    const tr=s.training||[]; const done=tr.filter(t=>t.done).length;
+    const pct=tr.length?Math.round(done/tr.length*100):0;
+    return `<div class="card" style="margin-bottom:10px"><div class="row"><div style="flex:1">
+      <div style="font-weight:700">${esc(s.name)}</div>
+      <div class="note">${done}/${tr.length} milestones${s.role?" · "+esc(s.role):""}</div></div>
+      <button class="btn sm sec" onclick="editStaff('${s.id}')">Edit</button></div>
+      <div class="progress"><i style="width:${pct}%"></i></div></div>`;
+  }).join("");
+}
+function editStaff(id){
+  const s=id?STATE.staff.find(x=>x.id===id):null;
+  const d=s||{brand:STATE.brand==="ALL"?"APH":STATE.brand,role:"Journeyman Plumber",trustShield:false,training:[]};
+  const tr=d.training||[];
+  const trHtml = s ? `<div class="field"><label>Training milestones</label>
+    ${tr.map((t,i)=>`<div class="row" style="margin-bottom:6px"><button class="btn sm ${t.done?"":"ghost"}" style="${t.done?"":"opacity:.7"}" onclick="toggleTraining('${id}',${i})">${t.done?"✓":"○"}</button><span style="flex:1;${t.done?"opacity:.6;text-decoration:line-through":""}">${esc(t.text)}</span><button class="btn sm ghost" onclick="delTraining('${id}',${i})">✕</button></div>`).join("")||'<div class="note">No milestones yet.</div>'}
+    <div class="row" style="margin-top:8px"><input id="st_newtrain" placeholder="Add milestone…" style="flex:1;padding:9px 12px;background:var(--panel2);border:1px solid var(--line);border-radius:9px;color:var(--txt)"><button class="btn sm" onclick="addTraining('${id}')">Add</button></div>
+    </div>` : `<div class="note">Save this staff member to start adding training milestones.</div>`;
+  openModal(`<h2>${s?"Edit staff":"New staff"}</h2>
+    ${F("Full name","st_name",d.name,"text")}
+    <div class="grid g2">${S("Role","st_role",STAFF_ROLES,d.role)}${S("Brand","st_brand",["APH","SUS","Both"],d.brand)}</div>
+    <div class="grid g2">${S("Certification","st_certtype",CERT_TYPES,d.certType)}${F("Cert # (Alberta)","st_certnum",d.certNumber,"text")}</div>
+    <div class="grid g2">${F("Years experience","st_years",d.yearsExp,"number")}${F("Phone","st_phone",d.phone,"tel")}</div>
+    ${F("Email","st_email",d.email,"email")}
+    ${F("Specialties","st_spec",d.specialties,"text")}
+    <div class="field"><label>Show on public Trust Shield?</label><select id="st_shield"><option value="no" ${d.trustShield?"":"selected"}>No</option><option value="yes" ${d.trustShield?"selected":""}>Yes — verified, list publicly</option></select></div>
+    ${trHtml}
+    <div class="modal-actions"><button class="btn" onclick="saveStaff('${id||""}')">Save</button></div>
+    ${s?`<button class="btn ghost" style="margin-top:10px" onclick="if(confirm('Delete staff?')){delRec('staff','${id}')}">Delete</button>`:""}`);
+}
+function saveStaff(id){
+  const x={name:val("st_name").trim(),role:val("st_role"),brand:val("st_brand"),certType:val("st_certtype"),
+    certNumber:val("st_certnum").trim(),yearsExp:val("st_years"),phone:val("st_phone").trim(),
+    email:val("st_email").trim(),specialties:val("st_spec").trim(),trustShield:val("st_shield")==="yes"};
+  if(!x.name){toast("Name required");return;}
+  if(!id) x.training=[];
+  upsert("staff",x,id);
+  saveState();closeModal();render();toast("Staff saved");
+}
+function addTraining(id){
+  const s=STATE.staff.find(x=>x.id===id); const t=val("st_newtrain").trim(); if(!s||!t) return;
+  s.training=s.training||[]; s.training.push({text:t,done:false}); touch(s); saveState(); editStaff(id);
+}
+function toggleTraining(id,i){ const s=STATE.staff.find(x=>x.id===id); if(!s||!s.training[i])return; s.training[i].done=!s.training[i].done; touch(s); saveState(); editStaff(id); }
+function delTraining(id,i){ const s=STATE.staff.find(x=>x.id===id); if(!s)return; s.training.splice(i,1); touch(s); saveState(); editStaff(id); }
+
+/* =========================================================
+   B2B COMPLIANCE CONTRACTS (Suck-U-Sump)
+   ========================================================= */
+function viewContracts(){
+  const all=STATE.contracts.filter(c=>STATE.brand==="ALL"||c.brand===STATE.brand||c.brand==="Both");
+  const active=all.filter(c=>c.status==="Active");
+  const arr=active.reduce((s,c)=>s+(Number(c.annualValue)||0),0);
+  const due=all.filter(c=>c.nextServiceDate&&daysUntil(c.nextServiceDate)!=null&&daysUntil(c.nextServiceDate)<=14&&c.status==="Active");
+  let html=`<div class="page-title">Compliance Contracts</div><div class="page-sub">Suck-U-Sump recurring B2B · ${brandLabel()}</div>`;
+  html+=`<div class="grid g3">${kpi("Active",active.length,"contracts",true)}${kpi("Recurring ARR",fmtMoney(arr),"annual value")}${kpi("Service due ≤14d",due.length,due.length?"schedule soon":"none")}</div>`;
+  if(due.length){
+    html+=`<div class="section-h"><h2>📅 Service due</h2></div>`;
+    html+=due.sort((a,b)=>a.nextServiceDate>b.nextServiceDate?1:-1).map(c=>`<div class="list-item" onclick="editContract('${c.id}')">
+      <div class="main"><div class="t">${esc(c.client)}</div><div class="s">${esc(c.service||"")} · ${esc(c.tier||"")}</div></div>
+      <div class="rt" style="color:${daysUntil(c.nextServiceDate)<=3?"var(--red)":"var(--warn)"}">${fmtDate(c.nextServiceDate)}</div></div>`).join("");
+  }
+  html+=`<div class="section-h"><h2>All contracts</h2></div>`;
+  if(!all.length) return html+emptyCard("No contracts yet. Tap + to add a compliance contract or prospect.");
+  html+=all.slice().sort((a,b)=>(a.status>b.status?1:-1)).map(c=>{
+    const dot=c.status==="Active"?"var(--green)":c.status==="Pending"?"var(--warn)":c.status==="Prospect"?"var(--blue)":"var(--muted2)";
+    return `<div class="list-item" onclick="editContract('${c.id}')"><span class="flag-dot" style="background:${dot}"></span>
+      <div class="main"><div class="t">${esc(c.client)} ${c.brand==="Both"?brandChip("Both"):""}</div>
+      <div class="s">${esc(c.tier||"")} · ${esc(c.service||"")}${c.annualValue?" · "+fmtMoney(c.annualValue)+"/yr":""}</div></div>
+      <div class="rt">${esc(c.status||"")}</div></div>`;}).join("");
+  return html;
+}
+function editContract(id){
+  const c=id?STATE.contracts.find(x=>x.id===id):null;
+  const d=c||{brand:"SUS",tier:"Annual",service:"Grease trap",status:"Prospect",manifests:[]};
+  const man=d.manifests||[];
+  const manHtml = c ? `<div class="field"><label>Service manifests (${man.length})</label>
+    ${man.slice(0,8).map(m=>`<div class="note" style="padding:4px 0">📄 ${esc(m.date)} — ${esc(m.note||"service completed")}</div>`).join("")||'<div class="note">None logged.</div>'}
+    <button class="btn sm sec" style="margin-top:6px" onclick="logService('${id}')">＋ Log service (advances next date)</button></div>` : "";
+  openModal(`<h2>${c?"Edit contract":"New contract"}</h2>
+    ${F("Client / property","k_client",d.client,"text")}
+    <div class="grid g2">${S("Brand","k_brand",["SUS","Both"],d.brand)}${S("Service","k_service",CONTRACT_SERVICES,d.service)}</div>
+    <div class="grid g2">${S("Tier","k_tier",CONTRACT_TIERS,d.tier)}${S("Status","k_status",CONTRACT_STATUS,d.status)}</div>
+    <div class="grid g2">${F("Annual value $","k_value",d.annualValue,"number")}${F("Start date","k_start",d.startDate,"date")}</div>
+    ${F("Next service date","k_next",d.nextServiceDate,"date")}
+    <div class="grid g2">${F("Contact","k_contact",d.contact,"text")}${F("Contact email","k_email",d.contactEmail,"email")}</div>
+    ${T("Notes","k_notes",d.notes)}
+    ${manHtml}
+    <div class="modal-actions">
+      <button class="btn sec" onclick="aiContractEmail('${id||""}')">✨ Draft renewal email</button>
+      <button class="btn" onclick="saveContract('${id||""}')">Save</button></div>
+    ${c?`<button class="btn ghost" style="margin-top:10px" onclick="if(confirm('Delete contract?')){delRec('contracts','${id}')}">Delete</button>`:""}
+    <div id="aiOut"></div>`);
+}
+function saveContract(id){
+  const x={client:val("k_client").trim(),brand:val("k_brand"),service:val("k_service"),tier:val("k_tier"),
+    status:val("k_status"),annualValue:Number(val("k_value"))||0,startDate:val("k_start"),
+    nextServiceDate:val("k_next"),contact:val("k_contact").trim(),contactEmail:val("k_email").trim(),notes:val("k_notes").trim()};
+  if(!x.client){toast("Client required");return;}
+  if(!id) x.manifests=[];
+  upsert("contracts",x,id);
+  saveState();closeModal();render();toast("Contract saved");
+}
+function logService(id){
+  const c=STATE.contracts.find(x=>x.id===id); if(!c)return;
+  c.manifests=c.manifests||[]; c.manifests.unshift({date:today(),note:"Service completed — compliance manifest generated"});
+  const days=FREQ_DAYS[c.tier]||365; const base=c.nextServiceDate&&new Date(c.nextServiceDate)>new Date()?new Date(c.nextServiceDate):new Date();
+  base.setDate(base.getDate()+days); c.nextServiceDate=base.toISOString().slice(0,10); touch(c);
+  saveState();editContract(id);toast("Service logged · next "+fmtDate(c.nextServiceDate));
+}
+function aiContractEmail(id){
+  const c=id?STATE.contracts.find(x=>x.id===id):{client:val("k_client"),tier:val("k_tier"),service:val("k_service")};
+  const tmpl=`Hi ${c.contact||"there"},\n\nThis is a reminder from Suck-U-Sump Service (an Amyotte's company) regarding ${c.client||"your property"}'s ${(c.service||"compliance").toLowerCase()} service. Your ${(c.tier||"annual").toLowerCase()} compliance contract keeps you inspector-ready year-round — we handle the schedule so you never have to think about it, and every service includes a digital compliance manifest.\n\nWould you like us to confirm your next service date and renewal? We also offer a bundled package with Amyotte's Plumbing & HVAC for all building mechanical needs under one contract.\n\nThank you,\n${STATE.me.name||"Suck-U-Sump Service"}\n(780) 498-0088`;
+  runAI(`Write a short, friendly B2B compliance-contract renewal/reminder email (under 130 words) from Suck-U-Sump Service (an Amyotte's company, Edmonton) to ${c.contact||"a client"} for property "${c.client||""}" regarding their ${c.service||"grease trap"} ${c.tier||"annual"} service. Emphasize: set-it-and-forget-it scheduling, digital compliance manifests, inspector-ready, optional bundled plumbing/HVAC. Sign with (780) 498-0088. No placeholders, no emojis.`, tmpl);
+}
+
+/* =========================================================
+   OWNER / FINANCE (master only)
+   ========================================================= */
+function viewFinance(){
+  if(!isMaster()) return `<div class="page-title">Owner / Finance</div><div class="card"><div class="empty">🔒 This view is restricted to the master (owner) account.</div></div>`;
+  const f=STATE.finance;
+  const openLeads=STATE.leads.filter(l=>!["Won","Lost"].includes(l.stage));
+  const pipe=openLeads.reduce((s,l)=>s+(Number(l.value)||0),0);
+  const wonRev=STATE.leads.filter(l=>l.stage==="Won").reduce((s,l)=>s+(Number(l.value)||0),0);
+  const arr=STATE.contracts.filter(c=>c.status==="Active").reduce((s,c)=>s+(Number(c.annualValue)||0),0);
+  const devPipe=STATE.developments.filter(d=>!["Won","Lost"].includes(d.stage)).reduce((s,d)=>s+(Number(d.estValue)||0),0);
+  const jobsComplete=STATE.jobs.filter(j=>j.status==="Complete");
+  const jobsRev=jobsComplete.reduce((s,j)=>s+(Number(j.value)||0),0);
+  const conv=STATE.leads.length?Math.round(STATE.leads.filter(l=>["Booked","Won"].includes(l.stage)).length/STATE.leads.length*100):0;
+  const rev=Number(f.monthRevenue)||0, tgt=Number(f.monthTarget)||0, exp=Number(f.monthExpenses)||0;
+  const tgtPct=tgt?Math.min(100,Math.round(rev/tgt*100)):0;
+  let html=`<div class="page-title">Owner / Finance</div><div class="page-sub">Master view · live across all modules</div>`;
+  html+=`<div class="grid g2">
+    ${kpi("Open pipeline",fmtMoney(pipe),openLeads.length+" leads",true)}
+    ${kpi("Won revenue",fmtMoney(wonRev),"closed leads")}
+    ${kpi("Recurring ARR",fmtMoney(arr),"active contracts")}
+    ${kpi("Dev pipeline",fmtMoney(devPipe),"potential")}
+    ${kpi("Completed jobs",jobsComplete.length,fmtMoney(jobsRev))}
+    ${kpi("Lead conversion",conv+"%","booked / total")}
+  </div>`;
+  html+=`<div class="section-h"><h2>This month</h2><div class="spacer"></div><button class="btn sm sec" onclick="editFinance()">Edit</button></div>`;
+  html+=`<div class="card"><div class="row"><div style="flex:1"><div class="note">Revenue vs target</div>
+    <div style="font-size:24px;font-weight:800">${fmtMoney(rev)} <span class="note">/ ${fmtMoney(tgt)}</span></div></div></div>
+    <div class="progress" style="margin-top:8px"><i style="width:${tgtPct}%"></i></div>
+    <div class="grid g3" style="margin-top:14px">
+      ${kpi("Expenses",fmtMoney(exp),"this month")}
+      ${kpi("Est. profit",fmtMoney(rev-exp),rev-exp>=0?"positive":"negative")}
+      ${kpi("Avg job value",f.avgJobValue?fmtMoney(f.avgJobValue):"—","target +25% upsell")}
+    </div></div>`;
+  html+=`<div class="note" style="margin-top:14px">KPI targets reference §10 of your strategy report. Update presence ratings under Customers → Scoreboard.</div>`;
+  return html;
+}
+function editFinance(){
+  const f=STATE.finance;
+  openModal(`<h2>This month's numbers</h2>
+    <div class="grid g2">${F("Revenue $","fi_rev",f.monthRevenue,"number")}${F("Target $","fi_tgt",f.monthTarget,"number")}</div>
+    <div class="grid g2">${F("Expenses $","fi_exp",f.monthExpenses,"number")}${F("Avg job value $","fi_avg",f.avgJobValue,"number")}</div>
+    <div class="modal-actions"><button class="btn" onclick="saveFinance()">Save</button></div>`);
+}
+function saveFinance(){
+  STATE.finance={monthRevenue:val("fi_rev"),monthTarget:val("fi_tgt"),monthExpenses:val("fi_exp"),avgJobValue:val("fi_avg")};
+  STATE.metaTs.finance=Date.now();
+  saveState();closeModal();render();toast("Saved");
+}
+
+/* =========================================================
+   AI — templates first, Haiku enhances on demand
+   ========================================================= */
+function aiPanel(text,enhancing){
+  const out=document.getElementById("aiOut"); if(!out) return;
+  out.innerHTML=`<div class="ai-box">${esc(text)}</div>
+    <div class="row" style="margin-top:8px;gap:8px">
+      <button class="btn sm sec" onclick="copyAI()">Copy</button>
+      ${enhancing?'<span class="note">✨ enhancing with AI…</span>':""}
+    </div>`;
+  out._text=text;
+}
+function copyAI(){ const out=document.getElementById("aiOut"); if(out&&out._text){ navigator.clipboard&&navigator.clipboard.writeText(out._text); toast("Copied"); } }
+async function runAI(prompt, template){
+  aiPanel(template, !!STATE.apiKey);
+  if(!STATE.apiKey) return;
+  try{
+    const r=await callHaiku(prompt);
+    aiPanel(r,false);
+  }catch(e){ /* keep template */ aiPanel(template,false); }
+}
+async function callHaiku(prompt){
+  const resp=await fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST",
+    headers:{"Content-Type":"application/json","x-api-key":STATE.apiKey,
+      "anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+    body:JSON.stringify({model:"claude-haiku-4-5-20251001",max_tokens:600,messages:[{role:"user",content:prompt}]})
+  });
+  const data=await resp.json();
+  if(data.content&&data.content[0]) return data.content[0].text;
+  throw new Error("no content");
+}
+function brandName(b){ return b==="SUS"?"Suck-U-Sump Service":"Amyotte's Plumbing & Heating"; }
+
+function aiLeadReply(id){
+  const l=id?STATE.leads.find(x=>x.id===id):collectLeadDraft();
+  const bn=brandName(l.brand);
+  const tmpl=`Hi ${l.name||"there"}, this is ${STATE.me.name.split(" ")[0]||"the team"} from ${bn}. `+
+    `Thanks for reaching out about your ${(l.serviceType||"service").toLowerCase()}${l.city?" in "+l.city:""}. `+
+    `We'd love to help — when works best for a visit? We offer 24/7 service and our work is done by certified, licensed technicians. Reply here or call us anytime.`;
+  runAI(`Write a short, warm, professional follow-up SMS (under 60 words) from ${bn} (a 45-year family-owned Edmonton plumbing/HVAC + vac-truck company) to a lead named ${l.name||"the customer"} about ${l.serviceType||"a service"}${l.city?" in "+l.city:""}. Priority: ${l.priority}. Friendly, trustworthy, invite them to book. No emojis. No placeholders.`, tmpl);
+}
+function collectLeadDraft(){ return {name:val("l_name"),brand:val("l_brand"),serviceType:val("l_service"),city:val("l_city"),priority:val("l_priority")}; }
+
+function aiReviewRequest(id){
+  const c=id?STATE.customers.find(x=>x.id===id):{customer:val("c_name"),brand:val("c_brand")};
+  const bn=brandName(c.brand);
+  const tmpl=`Hi ${c.customer||"there"}, thank you for choosing ${bn}! If we earned a 5-star experience, would you mind leaving us a quick Google review? It takes 30 seconds and means the world to our small family team: [Google review link]. Thank you! — ${STATE.me.name.split(" ")[0]||"The team"}`;
+  runAI(`Write a friendly review-request SMS (under 50 words) from ${bn} to customer ${c.customer||""}. Ask for a Google review, include a [Google review link] placeholder, warm and brief, mention family-owned. No emojis.`, tmpl);
+}
+function aiReviewResponse(id){
+  const r=id?STATE.reputation.find(x=>x.id===id):{brand:val("rp_brand"),summary:val("rp_sum"),rating:Number(val("rp_rating")),isLicensingComplaint:val("rp_lic")==="yes"};
+  const bn=brandName(r.brand);
+  let tmpl;
+  if(r.isLicensingComplaint){
+    tmpl=`Thank you for your feedback. We take licensing seriously: every technician at ${bn} is a certified, licensed tradesperson, and we now publish our team's Alberta trade certifications on our Our Team page so anyone can verify them. We'd welcome the chance to discuss your experience directly — please reach us at (780) 462-5237.`;
+  } else if((r.rating||0)>=4){
+    tmpl=`Thank you so much for the kind words and for trusting ${bn}. Our team genuinely appreciates it — we're always here whenever you need us. Thanks again!`;
+  } else {
+    tmpl=`Thank you for letting us know, and we're sorry your experience fell short of the standard we hold ourselves to at ${bn}. We'd like to make this right — please reach out to us directly at (780) 462-5237 so we can look into it personally.`;
+  }
+  runAI(`Write a professional, calm public reply (under 70 words) for ${bn} responding to a ${r.rating||""}-star review that says: "${r.summary||""}". ${r.isLicensingComplaint?"This questions technician licensing — reassure that all techs are certified/licensed and certifications are publicly verifiable on the Our Team page. ":""}Courteous, non-defensive, invite offline contact at (780) 462-5237. No emojis.`, tmpl);
+}
+function aiDevOutreach(id){
+  const d=id?STATE.developments.find(x=>x.id===id):{projectName:val("d_name"),gc:val("d_gc"),contactName:val("d_cname"),city:val("d_city")};
+  const tmpl=`Hi ${d.contactName||"there"},\n\nI'm ${STATE.me.name||"with Amyotte's Mechanical Group"} — we're a 45-year, family-owned Edmonton mechanical group. Through our two divisions (Amyotte's Plumbing & HVAC and Suck-U-Sump vac-truck services) we can be a single point of contact for ${d.projectName||"your project"}${d.city?" in "+d.city:""}: plumbing, HVAC, backflow, grease traps, sumps and catch basins — one vendor, one invoice.\n\nCould we set up 15 minutes to see if we're a fit for your upcoming work?\n\nThank you,\n${STATE.me.name||""}\n(780) 462-5237`;
+  runAI(`Write a concise B2B intro email (under 130 words) from Amyotte's Mechanical Group to ${d.contactName||"a GC/developer"}${d.gc?" at "+d.gc:""} about project "${d.projectName||""}"${d.city?" in "+d.city:""}. Pitch the bundled "single point of contact" value: both Amyotte's Plumbing & HVAC and Suck-U-Sump under one vendor/one invoice. Professional, warm, request a 15-minute call, sign off with (780) 462-5237. No emojis, no placeholders.`, tmpl);
+}
+
+/* =========================================================
+   SETTINGS
+   ========================================================= */
+function viewSettings(){
+  let html=`<div class="page-title">Settings</div><div class="page-sub">${esc(STATE.me.name)} · ${esc(STATE.me.role)}${isMaster()?" · Master":""}</div>`;
+  html+=`<div class="card"><div class="section-h" style="margin-top:0"><h2>Data backup</h2></div>
+    <div class="note" style="margin-bottom:10px">Your data lives on this device. Export regularly — this is also how you move data to another device.</div>
+    <div class="row" style="gap:10px"><button class="btn sec" onclick="exportData()">⬇ Export backup</button>
+    <button class="btn sec" onclick="document.getElementById('importFile').click()">⬆ Import</button></div>
+    <input type="file" id="importFile" accept="application/json" style="display:none" onchange="importData(event)"></div>`;
+
+  html+=`<div class="card" style="margin-top:14px"><div class="section-h" style="margin-top:0"><h2>Cross-device sync</h2></div>
+    <div class="note" style="margin-bottom:10px">${syncEnabled()?"🟢 Enabled. Last sync: "+(STATE.sync.lastPull?new Date(STATE.sync.lastPull).toLocaleString():"—"):"⚪ Off. Enter the same Worker URL + secret on every device to sync in real time. One-time setup in SYNC_SETUP.md."}</div>
+    ${F("Worker URL","syncUrl",STATE.sync.url,"text")}
+    ${F("Shared secret","syncSecret",STATE.sync.secret,"text")}
+    <div class="row" style="gap:8px;flex-wrap:wrap">
+      <button class="btn sm sec" onclick="testSyncBtn()">Test</button>
+      <button class="btn sm" onclick="saveSync()">Save & enable</button>
+      ${syncEnabled()?'<button class="btn sm sec" onclick="syncNowBtn()">Sync now</button><button class="btn sm ghost" onclick="disableSync()">Disable</button>':""}
+    </div><div class="note" id="syncMsg" style="margin-top:8px"></div></div>`;
+
+  html+=`<div class="card" style="margin-top:14px"><div class="section-h" style="margin-top:0"><h2>Sample &amp; reset</h2></div>
+    <div class="note" style="margin-bottom:10px">New here? Load realistic example records to explore, then clear them when you're ready for real data.</div>
+    <div class="row" style="gap:10px;flex-wrap:wrap"><button class="btn sm sec" onclick="loadSampleData()">Load sample data</button><button class="btn sm ghost" onclick="clearAllData()">Clear all records</button></div></div>`;
+
+  if(isMaster()){
+    html+=`<div class="card" style="margin-top:14px"><div class="section-h" style="margin-top:0"><h2>AI features (master)</h2></div>
+      <div class="note" style="margin-bottom:10px">Optional. All draft buttons work without a key using templates. Add an Anthropic API key to enhance drafts with AI (Haiku, ~pennies). Stored only on this device. Set a $5 spending cap in your Anthropic console.</div>
+      ${F("Anthropic API key","setKey",STATE.apiKey?"••••••••"+STATE.apiKey.slice(-4):"","text")}
+      <div class="row" style="gap:10px"><button class="btn sm" onclick="saveKey()">Save key</button>${STATE.apiKey?'<button class="btn sm ghost" onclick="clearKey()">Remove</button>':""}</div></div>`;
+
+    html+=`<div class="card" style="margin-top:14px"><div class="section-h" style="margin-top:0"><h2>Team members</h2></div>
+      <div class="note" style="margin-bottom:10px">Add staff so they can sign in with their own PIN on shared/owned devices.</div>
+      ${Object.keys(STATE.accounts).map(n=>`<div class="list-item"><div class="main"><div class="t">${esc(n)}</div><div class="s">${esc(STATE.accounts[n].role||"")}${STATE.accounts[n].master?" · Master":""}</div></div>${n!==STATE.masterUser?`<button class="btn sm ghost" onclick="removeAccount('${esc(n)}')">Remove</button>`:""}</div>`).join("")}
+      <button class="btn sec" style="margin-top:8px" onclick="addMember()">+ Add team member</button></div>`;
+  }
+
+  html+=`<div class="card" style="margin-top:14px"><div class="section-h" style="margin-top:0"><h2>About</h2></div>
+    <div class="note">Amyotte Mechanical Group Command Center ${APP_VERSION}<br>
+    Records: ${STATE.leads.length} leads · ${STATE.customers.length} customers · ${STATE.developments.length} developments · ${STATE.jobs.length} jobs · ${STATE.inventory.length} parts · ${STATE.staff.length} staff · ${STATE.contracts.length} contracts<br>
+    Single-file PWA · offline-ready · data stored locally on this device.</div></div>`;
+
+  html+=`<button class="btn ghost" style="margin-top:16px" onclick="signOut()">Sign out</button>`;
+  html+=`<div style="height:30px"></div>`;
+  return html;
+}
+function setSyncMsg(m){ const e=document.getElementById("syncMsg"); if(e) e.textContent=m; }
+async function testSyncBtn(){ const u=val("syncUrl").trim(),s=val("syncSecret").trim(); if(!u||!s){setSyncMsg("Enter URL and secret first");return;} setSyncMsg("Testing…"); const ok=await syncTest(u,s); setSyncMsg(ok?"✅ Connected — ready to enable":"❌ Could not connect — check URL/secret"); }
+async function saveSync(){ STATE.sync.url=val("syncUrl").trim(); STATE.sync.secret=val("syncSecret").trim(); STATE.sync.enabled=!!(STATE.sync.url&&STATE.sync.secret); saveStateLocal(); if(STATE.sync.enabled){ setSyncMsg("Saved. Syncing…"); await syncPull(); await syncPushNow(); } render(); toast(STATE.sync.enabled?"Sync enabled":"Sync off (need URL + secret)"); }
+function disableSync(){ STATE.sync.enabled=false; saveStateLocal(); render(); toast("Sync disabled"); }
+async function syncNowBtn(){ setSyncMsg("Syncing…"); const ok=await syncPushNow(); render(); setSyncMsg(ok?"✅ Synced "+new Date().toLocaleTimeString():"❌ Sync failed"); }
+function saveKey(){ const k=val("setKey").trim(); if(k&&!k.startsWith("••")){ STATE.apiKey=k; saveState(); toast("Key saved"); render(); } }
+function clearKey(){ STATE.apiKey=""; saveState(); render(); toast("Key removed"); }
+function addMember(){
+  openModal(`<h2>Add team member</h2>
+    ${F("Name","m_name","","text")}${F("Role","m_role","","text")}${F("4-digit PIN","m_pin","","tel")}
+    <div class="err" id="m_err"></div>
+    <div class="modal-actions"><button class="btn" onclick="saveMember()">Add</button></div>`);
+}
+function saveMember(){
+  const n=val("m_name").trim(),r=val("m_role").trim(),p=val("m_pin").trim();
+  if(!n) return setErr("m_err","Name required");
+  if(p.length<4) return setErr("m_err","PIN must be 4+ digits");
+  if(STATE.accounts[n]) return setErr("m_err","Name already exists");
+  const salt=newSalt(); STATE.accounts[n]={salt,hash:hashPin(p,salt),role:r,master:false};
+  saveState();closeModal();render();toast("Member added");
+}
+function removeAccount(n){ if(n===STATE.masterUser)return; if(confirm("Remove "+n+"?")){ delete STATE.accounts[n]; saveState(); render(); } }
+function exportData(){
+  const blob=new Blob([JSON.stringify(STATE,null,2)],{type:"application/json"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+  a.download="amg-cc-backup-"+today()+".json"; a.click(); toast("Backup exported");
+}
+function importData(ev){
+  const f=ev.target.files[0]; if(!f) return;
+  const rd=new FileReader();
+  rd.onload=()=>{ try{ const data=JSON.parse(rd.result);
+    if(!confirm("Import will merge backup data into this device. Continue?")) return;
+    STATE=deepMerge(JSON.parse(JSON.stringify(FRESH_STATE)),data); saveState(); render(); toast("Backup imported");
+  }catch(e){ toast("Invalid backup file"); } };
+  rd.readAsText(f);
+}
+
+/* ---- sample data + reset (make the app instantly understandable) ---- */
+function dPlus(n){ return new Date(Date.now()+n*86400000).toISOString().slice(0,10); }
+function loadSampleData(){
+  upsert("leads",{name:"Janice Whitfield",phone:"780-555-0142",brand:"APH",serviceType:"Emergency plumbing",source:"Phone",city:"Sherwood Park",stage:"New",priority:"Emergency",value:650,nextFollowUp:today(),notes:"Burst pipe under kitchen sink.",crossDispatch:{flag:false,note:"",fromTech:""}});
+  upsert("leads",{name:"Northgate Diner",phone:"780-555-0199",brand:"SUS",serviceType:"Grease trap",source:"Referral",city:"Edmonton",stage:"Quoted",priority:"Normal",value:1200,nextFollowUp:dPlus(2),notes:"Annual compliance prospect.",crossDispatch:{flag:false,note:"",fromTech:""}});
+  upsert("leads",{name:"Beaumont Towers",phone:"780-555-0177",brand:"APH",serviceType:"Backflow",source:"Cross-dispatch",city:"Beaumont",stage:"Contacted",priority:"High",value:900,nextFollowUp:dPlus(1),notes:"Found during SUS sump visit.",crossDispatch:{flag:true,note:"Failed backflow valve spotted by vac crew",fromTech:"Dave"}});
+  upsert("customers",{customer:"Riverside Bistro",brand:"SUS",type:"Restaurant / QSR",relationship:"VIP",lifetimeValue:8400,contractCustomer:true,phone:"780-555-0120",email:"chef@riverside.ca",lastJobDate:dPlus(-20),notes:"Quarterly grease trap contract."});
+  upsert("customers",{customer:"M. Sandoval",brand:"APH",type:"Residential",relationship:"Repeat",lifetimeValue:3100,contractCustomer:false,phone:"780-555-0188",lastJobDate:dPlus(-12),notes:"Furnace + hot water tank history."});
+  upsert("jobs",{customer:"Riverside Bistro",brand:"SUS",type:"Grease trap",date:today(),time:"10:30",tech:"Dave",status:"Dispatched",address:"112 River Rd",city:"Edmonton",value:380,notes:"Quarterly service."});
+  upsert("jobs",{customer:"M. Sandoval",brand:"APH",type:"HVAC / furnace",date:today(),time:"14:00",tech:"Mike",status:"Scheduled",address:"88 Maple Cres",city:"Sherwood Park",value:540,notes:"No-heat call."});
+  upsert("inventory",{name:"40 gal hot water tank",sku:"HWT-40",brand:"APH",qty:3,reorderPoint:2,unitCost:520,location:"Warehouse",supplier:"EMCO"});
+  upsert("inventory",{name:'3/4" wax ring',sku:"WR-075",brand:"Shared",qty:1,reorderPoint:6,unitCost:4,location:"Van",supplier:"Wolseley"});
+  upsert("inventory",{name:"Backflow repair kit",sku:"BF-KIT",brand:"APH",qty:0,reorderPoint:2,unitCost:85,location:"Warehouse",supplier:"EMCO"});
+  upsert("staff",{name:"Cory Amyotte",role:"Owner",brand:"Both",certType:"Journeyman Plumber",certNumber:"AB-JP-00471",yearsExp:25,trustShield:true,specialties:"Boilers, gasfitting, commercial",training:[{text:"Backflow recertification",done:true},{text:"Refrigerant handling",done:true}]});
+  upsert("staff",{name:"Mike Renaud",role:"Journeyman Plumber",brand:"APH",certType:"Journeyman Plumber",certNumber:"AB-JP-01882",yearsExp:11,trustShield:true,specialties:"Service plumbing, water heaters",training:[{text:"WHMIS 2025",done:true},{text:"Boiler endorsement",done:false}]});
+  upsert("staff",{name:"Dave Okafor",role:"Vac Truck Operator",brand:"SUS",certType:"Other",certNumber:"",yearsExp:7,trustShield:false,specialties:"Parkade & high-rise vac, grease traps",training:[{text:"Confined space",done:true},{text:"Air brake refresher",done:false}]});
+  upsert("contracts",{client:"Riverside Bistro",brand:"SUS",service:"Grease trap",tier:"Quarterly",status:"Active",annualValue:1520,startDate:dPlus(-180),nextServiceDate:dPlus(7),contact:"Chef Marco",contactEmail:"chef@riverside.ca",notes:"City bylaw compliance.",manifests:[{date:dPlus(-90),note:"Service completed — manifest filed"}]});
+  upsert("contracts",{client:"Whyte Ave Food Court",brand:"Both",service:"Bundled mechanical",tier:"Annual",status:"Prospect",annualValue:9600,contact:"Property mgr",notes:"Bundled APH + SUS pitch."});
+  upsert("developments",{projectName:"Beaumont Commons Phase 2",devType:"Commercial new-build",city:"Beaumont",brandFit:["APH","Bundled"],stage:"Bid submitted",estValue:145000,bidDueDate:dPlus(9),gc:"Trillium Construction",contactName:"S. Patel",source:"Permit data",notes:"Plumbing + HVAC rough-in package."});
+  upsert("reputation",{brand:"APH",platform:"BBB",rating:1,flag:"Needs response",isLicensingComplaint:true,summary:"Reviewer questions whether techs are licensed journeymen.",responseNote:""});
+  STATE.presenceScore={googleAPH:"4.2",googleSUS:"4.4",volMonth:"6",igFollowers:"180"}; STATE.metaTs.presenceScore=Date.now();
+  STATE.finance={monthRevenue:"42000",monthTarget:"55000",monthExpenses:"28000",avgJobValue:"515"}; STATE.metaTs.finance=Date.now();
+  saveState(); render(); toast("Sample data loaded — explore freely");
+}
+function clearAllData(){
+  if(!confirm("Remove ALL records (leads, jobs, customers, inventory, staff, contracts, reviews, developments)? Your account and sync settings stay. This cannot be undone.")) return;
+  SYNCED.forEach(c=>{ (STATE[c]||[]).forEach(r=>STATE.tombstones.push({coll:c,id:r.id,ts:Date.now()})); STATE[c]=[]; });
+  STATE.presenceScore={googleAPH:"",googleSUS:"",volMonth:"",igFollowers:""}; STATE.metaTs.presenceScore=Date.now();
+  STATE.finance={monthRevenue:"",monthTarget:"",avgJobValue:"",monthExpenses:""}; STATE.metaTs.finance=Date.now();
+  saveState(); render(); toast("All records cleared");
+}
+function showWelcome(){
+  openModal(`<h2>Welcome to your Command Center 👋</h2>
+    <p class="note" style="margin-bottom:14px">This is your all-in-one hub for leads, jobs, customers, reviews, inventory, staff, contracts and finances — for both Amyotte's Plumbing and Suck-U-Sump.</p>
+    <p class="note" style="margin-bottom:14px">Want to see it filled in with realistic examples first? You can clear them anytime in Settings.</p>
+    <button class="btn" onclick="STATE.welcomed=true;saveState();loadSampleData();closeModal()">✨ Load sample data &amp; explore</button>
+    <button class="btn sec" style="margin-top:10px" onclick="STATE.welcomed=true;saveState();closeModal();go('help')">Show me how it works</button>
+    <button class="btn ghost" style="margin-top:10px" onclick="STATE.welcomed=true;saveState();closeModal()">Start empty</button>`);
+}
+
+/* =========================================================
+   Form field builders + modal
+   ========================================================= */
+function F(label,id,v,type){ return `<div class="field"><label>${esc(label)}</label><input id="${id}" type="${type||"text"}" value="${esc(v==null?"":v)}"></div>`; }
+function T(label,id,v){ return `<div class="field"><label>${esc(label)}</label><textarea id="${id}" rows="3">${esc(v==null?"":v)}</textarea></div>`; }
+function S(label,id,opts,sel){ return `<div class="field"><label>${esc(label)}</label><select id="${id}">${opts.map(o=>`<option value="${esc(o)}" ${String(sel)===String(o)?"selected":""}>${esc(o===""?"—":o)}</option>`).join("")}</select></div>`; }
+function emptyCard(m){ return `<div class="card"><div class="empty">${esc(m)}</div></div>`; }
+function openModal(html){
+  document.getElementById("modalRoot").innerHTML=`<div class="modal-bg" onclick="if(event.target===this)closeModal()"><div class="modal"><div class="grab"></div>${html}</div></div>`;
+}
+function closeModal(){ document.getElementById("modalRoot").innerHTML=""; }
+
+/* =========================================================
+   BOOT
+   ========================================================= */
+loadState();
+if(STATE.me && STATE.me.name && STATE.accounts[STATE.me.name]){
+  document.getElementById("auth").classList.add("hidden");
+  document.getElementById("app").style.display="flex";
+  document.getElementById("nav").style.display="flex";
+  setBrand(STATE.brand||"ALL");
+  go("dashboard");
+  if(syncEnabled()) syncPull();
+  if(!STATE.welcomed) setTimeout(showWelcome,350);
+} else {
+  renderAuth();
+}
+if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw.js").catch(()=>{}); }
+</script>
+</body>
+</html>
